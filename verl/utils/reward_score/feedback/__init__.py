@@ -21,6 +21,9 @@ def compute_score(
         results = mcq.compute_score(solution_str, ground_truth)
     elif data_source in ["tooluse"]:
         results = tooluse.compute_score(solution_str, ground_truth)
+    elif data_source in ["ranking"]:
+        from exp.grpo.ranking import compute_score as ranking_compute_score
+        results = ranking_compute_score(solution_str, ground_truth, extra_info)
     else:
         raise ValueError(f"Reward style {data_source} not found.")
     return results
