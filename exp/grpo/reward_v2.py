@@ -24,9 +24,9 @@ REWARD_CLIP = 2.0
 
 # 权重配置
 WEIGHTS = {
-    "eval": 0.45,
+    "eval": 0.20,
     "rule": 0.20,
-    "llm": 0.35,
+    "llm": 0.60,
 }
 
 # 无 LLM 时的 fallback 权重
