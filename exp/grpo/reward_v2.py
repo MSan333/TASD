@@ -284,7 +284,7 @@ def compute_score(
     # L2: rule_score
     rule_score = compute_rule_score(rank_list, rule_signals)
 
-    # L3: llm_score (由外部 batch 填充, 此处默认 None)
+    # L3: llm_score (filled externally by batch LLM Judge or extra_info)
     llm_score = None
     if extra_info and "llm_score" in extra_info:
         llm_score = extra_info["llm_score"]

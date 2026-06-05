@@ -33,9 +33,16 @@ save_path="${OSS_ROOT}/result/${JOB_NAME:-grpo_ranking}"
 
 # ── 环境 ────────────────────────────────────────────────────────────────
 export PYTHONPATH="$(pwd):${PYTHONPATH:-}"
+
+# ── LLM Judge 配置 (qwen-plus via DashScope) ────────────────────────────
+export OPENAI_API_KEY="${OPENAI_API_KEY:-sk-93bf8a433943448bad6611ca5532a113}"
+export OPENAI_BASE_URL="${OPENAI_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}"
+export OPENAI_MODEL="${OPENAI_MODEL:-qwen3.6-max-preview}"
+
 unset VLLM_ATTENTION_BACKEND
 export VLLM_USE_V1=1
 export VLLM_LOGGING_LEVEL=WARN
+export RAY_memory_monitor_refresh_ms=0
 export WANDB_MODE=offline
 export WANDB_ENTITY=oh-my-team
 export SWANLAB_MODE=cloud
@@ -56,7 +63,9 @@ python -m verl.trainer.main_ppo \
     data.train_batch_size=${TRAIN_BATCH_SIZE} \
     data.train_files="${train_data_path}" \
     data.val_files="${val_data_path}" \
+    reward_model.reward_manager=batch \
     custom_reward_function.path="$(pwd)/verl/utils/reward_score/feedback/__init__.py" \
+    custom_reward_function.name=compute_score_batch \
     actor_rollout_ref.model.path="${model_path}" \
     actor_rollout_ref.actor.optim.lr=${LR} \
     actor_rollout_ref.actor.optim.lr_warmup_steps=10 \
@@ -65,7 +74,7 @@ python -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.n=${ROLLOUT_N} \
     actor_rollout_ref.rollout.val_kwargs.n=${VAL_N} \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.85 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.5 \
     algorithm.rollout_correction.rollout_is=token \
     algorithm.kl_ctrl.kl_coef=${KL_COEF} \
     trainer.total_epochs=30 \
@@ -77,4 +86,4 @@ python -m verl.trainer.main_ppo \
     trainer.project_name="${PROJECT_NAME:-GRPO-Ranking}" \
     trainer.experiment_name="${JOB_NAME:-grpo_ranking}" \
     trainer.group_name="GRPO-ranking" \
-    "trainer.logger=[console,swanlab]"
+    "trainer.logger=[console]"
