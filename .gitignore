@@ -98,6 +98,7 @@ celerybeat-schedule
 # dotenv
 .env
 env.sh
+!exp/grpo/env.sh
 
 # virtualenv
 venv/
@@ -139,3 +140,5 @@ outputs
 other_implementation
 Dockerfile.gh200-ofi
 DOCKER_PLAN_GH200.mdxdl_config_*.json
+exp/grpo/data/
+outputs/
