@@ -86,4 +86,4 @@ python -m verl.trainer.main_ppo \
     trainer.project_name="${PROJECT_NAME:-GRPO-Ranking}" \
     trainer.experiment_name="${JOB_NAME:-grpo_ranking}" \
     trainer.group_name="GRPO-ranking" \
-    "trainer.logger=[console]"
+    "trainer.logger=[console,swanlab]"

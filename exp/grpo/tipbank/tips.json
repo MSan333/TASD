@@ -1,0 +1,239 @@
+[
+  {
+    "skill_id": "skill_bad_09bf127c",
+    "name": "键名方向冲突校验",
+    "category": "tip",
+    "principle": "排序前强制校验底层字段与动作语义的方向一致性，冲突时触发降权防逻辑倒挂。",
+    "when_to_apply": "候选卡片生成阶段，且action_name极性与rank_key/底层指标趋势呈反向。",
+    "how_to_apply": "执行方向冲突硬校验，不匹配则强制打入低优池，确保推荐与打分逻辑同向。",
+    "confidence": 0.82,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T15:19:52.688480",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "MY",
+      "TH",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_troi_increase",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease",
+      "smax_am_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "键名极性混淆致排序逻辑倒挂"
+  },
+  {
+    "skill_id": "skill_bad_0709f66a",
+    "name": "候选池边界硬约束",
+    "category": "tip",
+    "principle": "设定严格的输出边界校验，排序结果必须完全源自输入card_pool，杜绝模型幻觉与越权推荐。",
+    "when_to_apply": "模型生成排序列表或推荐卡片序列时，需与上游输入的card_pool进行逐项比对校验。",
+    "how_to_apply": "增加Prompt硬约束与后处理校验逻辑，非card_pool内卡片直接剔除，确保推荐合规可控。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T16:01:23.420734",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_budget_decrease",
+      "smax_aa_troi_increase",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "越池推荐与冷启期幻觉排序"
+  },
+  {
+    "skill_id": "skill_good_ea6d1884",
+    "name": "稀疏状态模型意图直驱",
+    "category": "tip",
+    "principle": "在关键决策点与State模式缺失或模糊时，以smax_am_x_create模型输出为绝对驱动，绕过传统状态机路由。",
+    "when_to_apply": "上游特征解析返回空值或低置信度状态，但模型稳定输出smax_am_x_create标签时。",
+    "how_to_apply": "跳过常规状态决策树，直接注入创建推荐队列，仅依赖基础资金安全阈值进行末端过滤。",
+    "confidence": 0.8,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T16:55:21.105581",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "TH",
+      "PH",
+      "SG"
+    ],
+    "action_names": [
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_177a5a40",
+    "name": "稀疏特征模型补位",
+    "category": "tip",
+    "principle": "在关键决策点与State模式缺失或解析为空时，以高置信smax模型输出为绝对决策源，填补状态机盲区。",
+    "when_to_apply": "上游特征解析返回空值或低置信度，但smax模型稳定输出创建/调参标签且confidence≥0.8时。",
+    "how_to_apply": "跳过常规状态交叉验证，直接按模型标签极性生成推荐序列，并附加轻量级资金安全兜底校验。",
+    "confidence": 0.87,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T16:04:56.800613",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "SG",
+      "TH"
+    ],
+    "action_names": [
+      "smax_aa_troi_decrease",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_a223c2b8",
+    "name": "高置信模型降维决策",
+    "category": "tip",
+    "principle": "模型标签跨样本稳定高置信触发时视为意图真值，降维跳过复杂状态机交叉验证。",
+    "when_to_apply": "连续多会话或多样本命中smax_am_x_create且置信度>0.8，静态特征与行为日志存在噪声时。",
+    "how_to_apply": "剥离冗余特征权重，以模型输出为单一决策锚点，直接路由至对应动作卡片池。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T16:43:46.416855",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "SG",
+      "TH"
+    ],
+    "action_names": [
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_2b983511",
+    "name": "空特征高置信越权",
+    "category": "tip",
+    "principle": "针对关键决策点与State模式缺失场景，以高置信模型输出为唯一决策源，阻断空值导致的推荐降级。",
+    "when_to_apply": "上游特征解析返回空值或未定义，但模型稳定输出smax_系列标签且置信度落于0.8-0.92区间。",
+    "how_to_apply": "触发空状态补偿协议，直接采信模型标签极性生成推荐序列，禁止因特征缺失触发保守兜底。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T17:54:09.868442",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "TH",
+      "PH",
+      "SG"
+    ],
+    "action_names": [
+      "smax_aa_troi_decrease",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_9694e4fb",
+    "name": "激进预算流量绑定",
+    "category": "tip",
+    "principle": "budget_unlimited与increase高置信触发代表强资金释放，必须绑定拓量动作防预算空转浪费。",
+    "when_to_apply": "模型输出smax_am_x_budget_unlimited或increase标签，且confidence≥0.85。",
+    "how_to_apply": "强制关联推荐create或troi_decrease卡片，确保资金释放同步匹配流量承接载体。",
+    "confidence": 0.87,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T18:49:59.778194",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_troi_decrease",
+      "smax_am_x_troi_decrease",
+      "smax_am_x_budget_unlimited",
+      "smax_am_x_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_c8462600",
+    "name": "空特征窄带置信直驱",
+    "category": "tip",
+    "principle": "决策点与State缺失时，利用0.8-0.92置信窄带稳定性作唯一决策源绕过状态机。",
+    "when_to_apply": "关键决策点/State字段为空或解析失败，但smax_am_x_族标签confidence稳定≥0.8。",
+    "how_to_apply": "跳过常规多维交叉验证与冷却盾，直接按标签语义实例化卡片，防空值导致推荐降级。",
+    "confidence": 0.91,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T22:09:12.608529",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "ID",
+      "SG",
+      "MY"
+    ],
+    "action_names": [
+      "smax_am_x_troi_decrease",
+      "smax_am_x_create",
+      "smax_am_x_budget_increase",
+      "smax_am_troi_decrease",
+      "smax_am_x_budget_unlimited"
+    ]
+  },
+  {
+    "skill_id": "skill_good_5c4bd7e7",
+    "name": "异源前缀意图归一",
+    "category": "tip",
+    "principle": "smax与sd前缀差异属模型迭代痕迹，需剥离版本标识统一扩量路由。",
+    "when_to_apply": "日志或候选池混出smax_am_x_与sd_am_系列标签，且置信度均落于0.8-0.9。",
+    "how_to_apply": "建立前缀白名单映射，将异源标签归一化为标准扩量族，共享排序与校验逻辑。",
+    "confidence": 0.82,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-05T13:31:50.523416",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "MY",
+      "TH",
+      "PH",
+      "SG"
+    ],
+    "action_names": [
+      "smax_am_x_budget_increase",
+      "sd_am_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_5a37613f",
+    "name": "稀疏态窄带防降级",
+    "category": "tip",
+    "principle": "0.8-0.92置信窄带在特征缺失时方差极低，需建立防降级盾，阻断系统因空值触发的保守降权或回退。",
+    "when_to_apply": "上游State/决策点解析为空或低置信，但smax族标签confidence稳定处于0.8-0.92窄带。",
+    "how_to_apply": "锁定模型输出为唯一真值，关闭静态指标交叉验证漏斗，保障高胜率意图零摩擦承接。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-05T16:18:21.970006",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_decrease",
+      "smax_am_x_create"
+    ]
+  }
+]

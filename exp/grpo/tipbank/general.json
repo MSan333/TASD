@@ -1,0 +1,3137 @@
+[
+  {
+    "skill_id": "skill_good_5a277151",
+    "name": "低基无效调优转建",
+    "category": "general",
+    "principle": "广告基数过小且频繁微调ROAS或出价时，识别为流量池受限导致的无效调优，策略强制转向矩阵搭建。",
+    "when_to_apply": "campaign.total_count < 5 且近24h内ROAS或bid调整频次≥3次，消耗未达规模阈值。",
+    "how_to_apply": "拦截同维出价与ROAS优化卡，大幅提升新建计划权重，引导通过扩基数突破优化瓶颈。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T10:38:12.960798",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "TH",
+      "SG",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_create",
+      "smax_am_x_rapid_boost"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_2bc75f45",
+    "name": "动静特征优先级重构",
+    "category": "general",
+    "principle": "建立Behavior>Status>Wallet的硬性优先级链，防静态指标越权覆盖动态意图。",
+    "when_to_apply": "静态指标(高余额/少计划)触发增长逻辑，但近24h行为含降参/关停/激活记录。",
+    "how_to_apply": "强制屏蔽冲突卡片，以行为极性为准重构排序，静态指标仅作次级参考。",
+    "confidence": 0.95,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T10:40:30.704840",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "ID",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "静态指标覆盖动态负向意图"
+  },
+  {
+    "skill_id": "skill_bad_f223a25e",
+    "name": "增长推荐联合门禁",
+    "category": "general",
+    "principle": "为预算扩量卡设置多维状态前置校验，缺失投放基础或处于停滞期时硬拦截。",
+    "when_to_apply": "计划OFF、l7d_spend=0、balance未知或高ROAS目标构成消耗瓶颈。",
+    "how_to_apply": "触发硬过滤剔除budget_increase，转向激活/充值/目标优化卡片。",
+    "confidence": 0.92,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T10:40:30.704876",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "ID",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "无效状态下盲目推荐增长卡"
+  },
+  {
+    "skill_id": "skill_bad_6b00cbfe",
+    "name": "资金危急串行阻断",
+    "category": "general",
+    "principle": "建立财务安全与预算推荐的强依赖链路，资金枯竭时执行串行逻辑防无效推荐。",
+    "when_to_apply": "balance<500或balance/l7d_spend<0.1触及资金熔断线。",
+    "how_to_apply": "强制屏蔽budget_increase，锁定topup为唯一高优动作直至充值完成。",
+    "confidence": 0.9,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T10:40:30.704884",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "ID",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "资金枯竭时预算卡并行误排"
+  },
+  {
+    "skill_id": "skill_bad_48657380",
+    "name": "操作防抖互补路由",
+    "category": "general",
+    "principle": "引入操作后冷却与语义去重机制，识别刚完成的手动设置，抑制同类推荐。",
+    "when_to_apply": "近12-24h内已执行tROI激活、预算调整或计划开关切换。",
+    "how_to_apply": "命中近期操作则触发冷却沉底，优先路由至互补型或诊断类卡片。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T10:40:30.704891",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "ID",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "忽略近期操作导致重复推荐"
+  },
+  {
+    "skill_id": "skill_bad_e9c822d9",
+    "name": "重构期预算解耦",
+    "category": "general",
+    "principle": "识别高频建删与计划碎片化特征，将预算推荐与活跃度解耦防意图误判。",
+    "when_to_apply": "近24h内Create/Remove频次>3，或计划数>10且频繁增删。",
+    "how_to_apply": "强制降权budget_increase，转向推荐账户诊断、计划合并或智能出价。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T10:40:30.704897",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "ID",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "将账户重构误判为预算需求"
+  },
+  {
+    "skill_id": "skill_good_cd4f5424",
+    "name": "低基充裕优化拦截",
+    "category": "general",
+    "principle": "广告矩阵未成型且资金充足时，存量优化边际收益低，应硬拦截调优卡片，强制转向矩阵搭建。",
+    "when_to_apply": "campaign.total_count≤5 且 wallet.balance/l7d_spend≥2，近期含新建或参数微调。",
+    "how_to_apply": "压制Optimization/ROI类权重，优先Creation类，遵循基建优先于调优的生命周期原则。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T11:54:30.436619",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_create",
+      "smax_am_x_rapid_boost"
+    ]
+  },
+  {
+    "skill_id": "skill_good_ebb9a1f4",
+    "name": "操作紧迫度工具匹配",
+    "category": "general",
+    "principle": "识别高频调参或无限预算的强放量诉求，按操作紧迫度匹配工具响应速度，优先即时生效卡片。",
+    "when_to_apply": "短窗内高频操作(建/改/关) + 余额可支撑但消耗快 + 存量计划适中。",
+    "how_to_apply": "优先排序即时生效/速推类卡片，降级长周期优化与常规充值，以工具时效契合操作节奏。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T11:54:30.437272",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_create",
+      "smax_am_x_rapid_boost"
+    ]
+  },
+  {
+    "skill_id": "skill_good_48fb56c9",
+    "name": "会话动量意图路由",
+    "category": "general",
+    "principle": "引入极短时序行为动量，会话内连续触发同类操作时动态提升匹配卡片排序，实现流式跟随。",
+    "when_to_apply": "近30分钟内日志含≥2次Create/Adjust连续动作，且账户状态支持延续操作。",
+    "how_to_apply": "赋予实时操作流绝对权重，大幅提升Creation/Boost排序，压制跨意图卡片保心流。",
+    "confidence": 0.87,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T11:54:30.437282",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_create",
+      "smax_am_x_rapid_boost"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_336395d4",
+    "name": "效果缺口硬校验",
+    "category": "general",
+    "principle": "提效推荐需绑定实际投放表现差距，禁止仅凭新建或活跃信号盲目触发。",
+    "when_to_apply": "候选池含increase类卡片，且触发源为新建计划或常规活跃状态。",
+    "how_to_apply": "强制校验ROAS低于目标≥15%或预算消耗率>80%，未达标则降权至Top5外。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T11:57:27.726089",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "SG",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_budget_decrease",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "仅凭新建信号盲推，无视效果达标状态。"
+  },
+  {
+    "skill_id": "skill_bad_aabf8539",
+    "name": "跨参控本联动抑制",
+    "category": "general",
+    "principle": "识别跨参数控本操作，建立指标联动约束，抑制与卖家实操方向背离的推荐。",
+    "when_to_apply": "近期行为含maxBid/出价显著下调，或日志明确显示处于控成本周期。",
+    "how_to_apply": "自动压制tROI/budget_increase权重，优先切换至宽定向或bid优化建议。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T11:57:27.726765",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "SG",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_budget_decrease",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "跨指标策略未对齐，控本期逆势推提效。"
+  },
+  {
+    "skill_id": "skill_bad_3779bd5b",
+    "name": "无效状态硬拦截",
+    "category": "general",
+    "principle": "增长类卡片投放前需通过状态与数据有效性硬校验，彻底拦截无效或矛盾场景。",
+    "when_to_apply": "计划状态为OFF、wallet余额为unknown/0，或l7d_spend处于零耗期。",
+    "how_to_apply": "直接剔除increase类候选资格，强制路由至唤醒、充值或学习期引导卡片。",
+    "confidence": 0.92,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T11:57:27.726779",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "SG",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_budget_decrease",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "缺状态与数据硬过滤，无效场景误排增长。"
+  },
+  {
+    "skill_id": "skill_bad_1889c7c0",
+    "name": "连续收缩趋势降权",
+    "category": "general",
+    "principle": "捕捉同指标连续下调序列识别账户收缩期，对反向增长卡实施指数级降权。",
+    "when_to_apply": "近24小时内同维参数连续下调≥2次，或累计降幅超过30%。",
+    "how_to_apply": "相关increase卡片排序权重乘以0.1或直接过滤，全局切换至维稳策略。",
+    "confidence": 0.9,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T11:57:27.726786",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "SG",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_budget_decrease",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "忽略连续下调趋势，收缩期逆势高排增长。"
+  },
+  {
+    "skill_id": "skill_bad_27e0247e",
+    "name": "单信号防过载路由",
+    "category": "general",
+    "principle": "限制单一行为信号权重上限，强制引入多维状态交叉验证，防止单点特征主导排序。",
+    "when_to_apply": "排序逻辑过度依赖新建计划、功能激活等单一点状信号时。",
+    "how_to_apply": "引入联合判断漏斗，需叠加资金水位、消耗进度或效果缺口任一条件方可进高优池。",
+    "confidence": 0.86,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T11:57:27.726792",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "SG",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_budget_decrease",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "特征权重失衡，单点信号放大导致误推。"
+  },
+  {
+    "skill_id": "skill_good_f994ff5a",
+    "name": "跨区创建流标准化",
+    "category": "general",
+    "principle": "PH/SG/MY案例均指向创建动作的高成功率，表明扩量意图具跨市场普适性，应统一路由逻辑。",
+    "when_to_apply": "多站点账户出现连续新建行为或会话级创建爆发，且区域基线策略存在差异时。",
+    "how_to_apply": "抹平区域静态阈值差异，统一采用动态意图权重驱动创建卡置顶，延迟区域保守策略。",
+    "confidence": 0.75,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T15:18:03.134113",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "MY",
+      "SG",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_rapid_boost",
+      "smax_am_x_create",
+      "smax_aa_troi_decrease"
+    ]
+  },
+  {
+    "skill_id": "skill_good_f67dd7ba",
+    "name": "创速降参扩量链路",
+    "category": "general",
+    "principle": "创建、速爆与降tROI构成连贯拿量组合，识别该序列可提前布局工具链，阻断保守干预。",
+    "when_to_apply": "账户完成基建后出现速爆触发信号，或伴随tROI/iopRoas主动下调的放宽门槛行为。",
+    "how_to_apply": "按创建→速爆→降参顺序串联推荐，锁定扩量窗口期，硬拦截提效与限流类卡片。",
+    "confidence": 0.65,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T15:18:03.134707",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "MY",
+      "SG",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_rapid_boost",
+      "smax_am_x_create",
+      "smax_aa_troi_decrease"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_ab709573",
+    "name": "跨参观察期路由",
+    "category": "general",
+    "principle": "参数变更后设立跨维观察期，暂缓激进优化推荐，顺应投放节奏防策略冲突。",
+    "when_to_apply": "近30-60分钟内seller_behavior含预算/ROAS手动变更，且候选池含跨维度优化卡片。",
+    "how_to_apply": "触发跨参冷却降权，将troi/bidding类卡片排名后置，优先推稳盘或诊断策略。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T15:19:52.688407",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "MY",
+      "TH",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_troi_increase",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease",
+      "smax_am_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "跨参变更无观察期致策略冲突"
+  },
+  {
+    "skill_id": "skill_bad_7b67c7b7",
+    "name": "充值回血意图覆盖",
+    "category": "general",
+    "principle": "近期充值或余额回升时，以资金注入意图覆盖静态低余额阈值，强制转向扩量基建。",
+    "when_to_apply": "近24h含Manual TopUp或balance快速回升，且账户处于冷启或低耗积累期。",
+    "how_to_apply": "屏蔽troi_increase等保守控效卡，置顶creation/budget卡，顺应充值扩量心流。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T15:19:52.688456",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "MY",
+      "TH",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_troi_increase",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease",
+      "smax_am_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "静态低余额误判充值扩量意图"
+  },
+  {
+    "skill_id": "skill_bad_889cd499",
+    "name": "高频手调冗余熔断",
+    "category": "general",
+    "principle": "解析同参高频手动修改序列，触发推荐疲劳熔断，暂停系统同向干预防冗余打扰。",
+    "when_to_apply": "近2小时内seller_behavior显示同一参数手动调整≥2次，且候选池含同维优化卡。",
+    "how_to_apply": "直接过滤对应优化卡片，切换至效果观察或数据积累建议，防体验疲劳。",
+    "confidence": 0.9,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T15:19:52.688464",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "MY",
+      "TH",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_troi_increase",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease",
+      "smax_am_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "忽略高频手调致推荐严重冗余"
+  },
+  {
+    "skill_id": "skill_bad_79e9f31d",
+    "name": "收缩极性硬拦截",
+    "category": "general",
+    "principle": "识别降预算/降出价等明确收缩信号，建立极性互斥墙，硬拦截提效限流类反向卡片。",
+    "when_to_apply": "近期行为含budget/maxBid明确下调，或连续保守操作呈现账户收缩态势。",
+    "how_to_apply": "强降权troi_increase等限制卡，优先推预算分配优化，防负向策略叠加。",
+    "confidence": 0.93,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T15:19:52.688472",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "MY",
+      "TH",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_troi_increase",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease",
+      "smax_am_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "收缩意图误判致负向策略叠加"
+  },
+  {
+    "skill_id": "skill_bad_5d440622",
+    "name": "近期手调意图顺承校验",
+    "category": "general",
+    "principle": "解析近期手动调参方向与时间窗，建立意图顺承机制，同维操作后强制屏蔽冲突或重复推荐。",
+    "when_to_apply": "近24h内seller_behavior含预算/ROAS/tROI手动调整，且候选池含同维或反向优化卡片。",
+    "how_to_apply": "提取操作方向与时间戳，命中则对同维/冲突卡片强降权或屏蔽，转向互补或诊断类推荐。",
+    "confidence": 0.95,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T16:01:23.418366",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_budget_decrease",
+      "smax_aa_troi_increase",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "无视近期手调重复或反向推荐"
+  },
+  {
+    "skill_id": "skill_bad_1f2629aa",
+    "name": "混合控本信号优先仲裁",
+    "category": "general",
+    "principle": "多信号冲突时确立控本意图绝对主导权，降预算或升ROAS均视为收缩，压制扩量与高阶优化。",
+    "when_to_apply": "行为日志同时含预算下调与ROAS微调，或呈现升ROAS/降预算基调，且静态指标干扰判断。",
+    "how_to_apply": "赋予收缩操作最高决策权重，切换保守排序策略，硬拦截budget_increase与tROI优化卡。",
+    "confidence": 0.9,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T16:01:23.420691",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_budget_decrease",
+      "smax_aa_troi_increase",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "静态指标覆盖动态控本意图致误推"
+  },
+  {
+    "skill_id": "skill_bad_212bb98a",
+    "name": "低耗充资期扩量抑制",
+    "category": "general",
+    "principle": "建立充值后低消耗阶段的预算推荐门禁，资金未有效转化为消耗前，抑制预算扩张防节奏错配。",
+    "when_to_apply": "近24h含Manual TopUp或balance充裕，但l7d_spend极低(<balance*20%)或处于冷启零耗期。",
+    "how_to_apply": "屏蔽budget_increase卡片，优先推荐creation或激活消耗工具，顺应资金消化与冷启周期。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T16:01:23.420724",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_budget_decrease",
+      "smax_aa_troi_increase",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "充值低耗期机械触发预算增加推荐"
+  },
+  {
+    "skill_id": "skill_bad_15c1b658",
+    "name": "强负向状态财务解耦",
+    "category": "general",
+    "principle": "计划关停或保障停用等强负向状态触发绝对拦截，临时剥离钱包余额权重，防高资金覆盖收缩意图。",
+    "when_to_apply": "seller_behavior含campaign转OFF、troiGuarantee设Inactive等明确负向操作，无论余额高低。",
+    "how_to_apply": "强制过滤增长与预算扩张卡片，切换至重启引导或诊断策略，实现财务指标与负向状态解耦。",
+    "confidence": 0.92,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T16:01:23.420730",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_budget_decrease",
+      "smax_aa_troi_increase",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "高余额覆盖计划关停负向状态致误推"
+  },
+  {
+    "skill_id": "skill_good_4e800b53",
+    "name": "弱置信模型信号放大",
+    "category": "general",
+    "principle": "针对置信度偏低(≈0.5)的smax_am_x_create预测，引入短时行为与资金交叉验证，放大有效创建意图防漏推。",
+    "when_to_apply": "模型输出smax_am_x_create标签但置信度≤0.6，且账户处于PH/TH/SG常规活跃期时。",
+    "how_to_apply": "结合近30分钟操作频次与余额健康度二次校验，达标则强制提权创建卡，未达标则降级观察。",
+    "confidence": 0.75,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T16:55:21.104527",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "TH",
+      "PH",
+      "SG"
+    ],
+    "action_names": [
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_3588e4a2",
+    "name": "多站创建流节奏同步",
+    "category": "general",
+    "principle": "识别smax_am_x_create跨区触发特征，按站点投放习惯动态调整创建推荐强度与财务兜底顺位。",
+    "when_to_apply": "同一模型标签在PH/TH/SG多站并发触发，且各站资金利用率与计划基数呈现分化时。",
+    "how_to_apply": "PH站强化矩阵连推，TH/SG站采用单建加充值护航组合，保持模型意图与区域节奏对齐。",
+    "confidence": 0.7,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T16:55:21.105569",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "TH",
+      "PH",
+      "SG"
+    ],
+    "action_names": [
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_91edfaf6",
+    "name": "近期操作冷却与同维降权",
+    "category": "general",
+    "principle": "解析行为日志时间戳与变更方向，同参近期调整触发强制冷却，屏蔽冗余推荐防打扰。",
+    "when_to_apply": "近2小时内seller_behavior含预算/出价/创建手动记录，且候选池含同向或同维优化卡片。",
+    "how_to_apply": "匹配操作字段，同向卡权重乘0.3或移出Top3；优先推荐跨维拓品或创意优化，保障操作节奏。",
+    "confidence": 0.95,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T16:57:59.662913",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_aa_budget_decrease",
+      "smax_am_x_max_cpc_decrease"
+    ],
+    "failure_pattern": "刚调完参数仍高优推荐同向卡片"
+  },
+  {
+    "skill_id": "skill_bad_2401b2e0",
+    "name": "资耗比低水位硬拦截",
+    "category": "general",
+    "principle": "建立余额与近7天消耗比值门禁，低水位或零耗期强制压制扩容卡，前置资金与基建保障。",
+    "when_to_apply": "wallet.balance/l7d_spend<0.1，或l7d_spend=0/余额unknown，且候选池含budget_increase类卡片。",
+    "how_to_apply": "触发阈值时扩容卡强制降权至Top5后，首位置换为manual_topup或冷启数据积累指引卡片。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T16:57:59.662954",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_aa_budget_decrease",
+      "smax_am_x_max_cpc_decrease"
+    ],
+    "failure_pattern": "余额枯竭或零耗仍强推预算扩容"
+  },
+  {
+    "skill_id": "skill_bad_c80c4ace",
+    "name": "高基数负向意图切换",
+    "category": "general",
+    "principle": "识别降参/关功能信号叠加高计划数，判定进入存量优化期，强制切换推荐极性至提效控本。",
+    "when_to_apply": "近24h含bid/预算下调或功能关闭，且campaign.total_count>15，候选池含creation/扩量卡。",
+    "how_to_apply": "标记收缩意图，creation卡强制降权，troi/bidding卡片提权至Top2，压制拉新逻辑。",
+    "confidence": 0.9,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T16:57:59.662965",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_aa_budget_decrease",
+      "smax_am_x_max_cpc_decrease"
+    ],
+    "failure_pattern": "控本优化期误推扩量创建卡片"
+  },
+  {
+    "skill_id": "skill_bad_d7697c2d",
+    "name": "策略互斥与观察期路由",
+    "category": "general",
+    "principle": "构建多动作互斥矩阵与策略生效观察期，避免预算/ROI/自动扩容卡片同时高优叠加。",
+    "when_to_apply": "候选池同时含budget_increase、troi与auto_budget卡片，或近1小时内刚完成核心参数调整。",
+    "how_to_apply": "预算调整后24h内降权ROI/自动扩容卡；明确调参后优先推加品/创意，防策略抢跑冲突。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T16:57:59.662974",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_aa_budget_decrease",
+      "smax_am_x_max_cpc_decrease"
+    ],
+    "failure_pattern": "多策略并行叠加无视生效延迟"
+  },
+  {
+    "skill_id": "skill_good_b7fbbb5a",
+    "name": "高置信创建信号直驱",
+    "category": "general",
+    "principle": "当smax_am_x_create模型置信度≥0.85时，越过静态指标校验，直接锁定创建流首位，保障高胜率意图无缝承接。",
+    "when_to_apply": "模型输出smax_am_x_create标签且confidence≥0.85，无论余额水位或计划基数如何。",
+    "how_to_apply": "强制提升创建类卡片至Top1，压制充值与存量优化卡，仅保留资金枯竭硬熔断作为次级拦截。",
+    "confidence": 0.9,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T16:04:56.796167",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "SG",
+      "TH"
+    ],
+    "action_names": [
+      "smax_aa_troi_decrease",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_97445c3b",
+    "name": "跨站模型意图统御",
+    "category": "general",
+    "principle": "以smax系列模型标签为跨市场决策锚点，统一PH/SG/TH的创建与调参路由逻辑，削弱区域规则差异干扰。",
+    "when_to_apply": "PH/SG/TH等多站点并发触发smax_am_x_create或smax_aa_troi_decrease标签时。",
+    "how_to_apply": "建立模型标签优先于站点基线策略的路由层，按标签极性统一分配创建或扩量卡片，区域特征仅作顺位微调。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T16:04:56.800590",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "SG",
+      "TH"
+    ],
+    "action_names": [
+      "smax_aa_troi_decrease",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_5bc18b45",
+    "name": "操作状态同步沉底",
+    "category": "general",
+    "principle": "建立操作后同维冷却与状态比对机制，已调整或关闭功能强制降权防冗余。",
+    "when_to_apply": "近24h内Behavior含功能激活、参数手动调整或状态转为Inactive/OFF。",
+    "how_to_apply": "同维推荐卡降权至Top5后，已关闭功能直接沉底，转向互补或追踪动作。",
+    "confidence": 0.95,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T16:07:42.656310",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "VN",
+      "SG",
+      "ID",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_troi_increase",
+      "smax_am_x_budget_decrease",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "刚操作或关闭仍首推同维卡"
+  },
+  {
+    "skill_id": "skill_bad_9c08ac64",
+    "name": "扩缩意图极性互斥",
+    "category": "general",
+    "principle": "构建扩量与收缩意图的互斥墙，反向操作触发绝对拦截，防策略倒挂。",
+    "when_to_apply": "近期行为呈明确扩量(建计划/提预算)或收缩(连降预算/升ROAS)趋势。",
+    "how_to_apply": "扩量期硬拦截troi_increase等收紧卡；收缩期压制预算提升，确保同向。",
+    "confidence": 0.98,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T16:07:42.656344",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "VN",
+      "SG",
+      "ID",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_troi_increase",
+      "smax_am_x_budget_decrease",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "推荐方向与卖家实操意图冲突"
+  },
+  {
+    "skill_id": "skill_bad_b870de4b",
+    "name": "资耗极端水位拦截",
+    "category": "general",
+    "principle": "以资耗比为硬门槛，资金未就绪或处于极端水位时拦截优化卡，重置优先级。",
+    "when_to_apply": "balance为unknown/0、l7d_spend=0，或资耗比<0.2或>5。",
+    "how_to_apply": "危急时topup置Top1过滤设置卡；闲置时降权收缩卡；零耗硬拦截预算提升。",
+    "confidence": 0.93,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T16:07:42.656354",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "VN",
+      "SG",
+      "ID",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_troi_increase",
+      "smax_am_x_budget_decrease",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "忽略资金就绪度盲目推优化"
+  },
+  {
+    "skill_id": "skill_bad_fdc317e5",
+    "name": "冷启期收紧动作熔断",
+    "category": "general",
+    "principle": "识别新建或重启窗口，设立限制类动作熔断期，优先保障曝光拿量与数据积累。",
+    "when_to_apply": "近24h含Create或计划OFF转ON，且账户处于冷启拓量或低耗积累阶段。",
+    "how_to_apply": "对troi_increase/bid_decrease强降权，优先推荐拓量或素材优化卡片。",
+    "confidence": 0.89,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T16:07:42.656362",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "VN",
+      "SG",
+      "ID",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_troi_increase",
+      "smax_am_x_budget_decrease",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "冷启期误推限制卡压制起量"
+  },
+  {
+    "skill_id": "skill_bad_b3b2373f",
+    "name": "动态意图覆盖静态",
+    "category": "general",
+    "principle": "确立动态Behavior日志绝对优先于静态资金指标，防机械规则覆盖实时意图。",
+    "when_to_apply": "静态特征(高余额/计划开启)触发默认逻辑，但近期行为呈明确反向或已满足。",
+    "how_to_apply": "降级静态指标权重，以近24h操作序列方向重构排序，拦截背离动态意图的卡片。",
+    "confidence": 0.91,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T16:07:42.656369",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "VN",
+      "SG",
+      "ID",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_aa_troi_increase",
+      "smax_am_x_budget_decrease",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "静态指标越权覆盖动态意图"
+  },
+  {
+    "skill_id": "skill_good_251fa0dc",
+    "name": "创建置信分层路由",
+    "category": "general",
+    "principle": "针对smax_am_x_create在0.8-0.92区间的稳定表现，建立置信度分层响应机制，差异化校验强度。",
+    "when_to_apply": "模型输出smax_am_x_create标签，且confidence落于0.8-0.92区间，覆盖PH/TH/SG站点。",
+    "how_to_apply": "≥0.85免校验直推创建流；0.8-0.85附加轻量资耗比门禁，拦截极端枯竭账户。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T16:43:46.416185",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "SG",
+      "TH"
+    ],
+    "action_names": [
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_a74af237",
+    "name": "跨站创建序列标准化",
+    "category": "general",
+    "principle": "PH/TH/SG多站同标签高胜率表明创建意图具区域共性，需统一推荐序列防本地规则碎片化。",
+    "when_to_apply": "PH/TH/SG站点并发触发smax_am_x_create，且各站本地启发式规则存在排序差异时。",
+    "how_to_apply": "强制统一创建首位加速爆次席加充值兜底标准序列，覆盖站点级个性化排序逻辑。",
+    "confidence": 0.86,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T16:43:46.416846",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "SG",
+      "TH"
+    ],
+    "action_names": [
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_b762256e",
+    "name": "负向语义硬拦截",
+    "category": "general",
+    "principle": "解析降预算/升ROAS及-1转固定值等收紧语义，建立极性互斥墙拦截反向推荐。",
+    "when_to_apply": "近24h行为含预算/出价下调、ROAS上调，或预算从无限转为固定值。",
+    "how_to_apply": "强制降权troi_increase等冲突卡片，转向效率维护或顺承保守意图策略。",
+    "confidence": 0.94,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T16:45:55.740240",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "PH",
+      "ID"
+    ],
+    "action_names": [
+      "smax_aa_budget_decrease",
+      "smax_am_x_budget_decrease",
+      "smax_aa_troi_increase",
+      "smax_am_x_troi_increase",
+      "smax_am_budget_decrease",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "忽略收紧操作误推限制或扩量卡"
+  },
+  {
+    "skill_id": "skill_bad_967eba9c",
+    "name": "同维操作冷却盾",
+    "category": "general",
+    "principle": "识别近期已完成的同向参数调整，设置动态冷却期与语义去重防冗余堆叠。",
+    "when_to_apply": "近12-24h内seller_behavior已手动执行预算/出价同向变更。",
+    "how_to_apply": "对同类increase/decrease卡片强制降权，优先切换至跨维拓品或充值推荐。",
+    "confidence": 0.87,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T16:45:55.740263",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "PH",
+      "ID"
+    ],
+    "action_names": [
+      "smax_aa_budget_decrease",
+      "smax_am_x_budget_decrease",
+      "smax_aa_troi_increase",
+      "smax_am_x_troi_increase",
+      "smax_am_budget_decrease",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "刚调参仍推同类卡片致重复干预"
+  },
+  {
+    "skill_id": "skill_bad_38bdfa72",
+    "name": "资耗枯竭充值熔断",
+    "category": "general",
+    "principle": "建立余额与L7D消耗硬阈值门禁，资金危急时绝对压制扩量，强制充值置顶。",
+    "when_to_apply": "wallet.balance < l7d_spend*0.5或触及安全底线，且候选池含预算增加卡。",
+    "how_to_apply": "触发财务熔断将topup提至Top1，预算增加及创建卡片一律置底或隐藏。",
+    "confidence": 0.93,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T16:45:55.740270",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "PH",
+      "ID"
+    ],
+    "action_names": [
+      "smax_aa_budget_decrease",
+      "smax_am_x_budget_decrease",
+      "smax_aa_troi_increase",
+      "smax_am_x_troi_increase",
+      "smax_am_budget_decrease",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "余额严重不足仍高排预算增加"
+  },
+  {
+    "skill_id": "skill_bad_cdef51c5",
+    "name": "策略维度解耦校验",
+    "category": "general",
+    "principle": "严格隔离出价、预算与ROAS决策链路，禁止跨维信号替代推导或单指标绑架。",
+    "when_to_apply": "日志仅含出价调整或新建活跃信号，缺乏明确预算变更意图且余额偏高时。",
+    "how_to_apply": "切断高余额/调出价推导加预算的启发式关联，仅推荐同维优化或素材策略。",
+    "confidence": 0.86,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T16:45:55.740277",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "PH",
+      "ID"
+    ],
+    "action_names": [
+      "smax_aa_budget_decrease",
+      "smax_am_x_budget_decrease",
+      "smax_aa_troi_increase",
+      "smax_am_x_troi_increase",
+      "smax_am_budget_decrease",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "混淆出价预算意图凭余额误推"
+  },
+  {
+    "skill_id": "skill_good_12388921",
+    "name": "高置信带免检路由",
+    "category": "general",
+    "principle": "基于样本置信度稳定落于0.8-0.9区间，建立高置信带免检机制，压缩状态机校验链路。",
+    "when_to_apply": "模型输出smax_am_x_create或auto_topup_on标签，且confidence连续稳定处于0.8-0.9。",
+    "how_to_apply": "跳过资耗比与计划数静态门禁，直接输出对应高优卡片序列，保障高胜率意图即时响应。",
+    "confidence": 0.87,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T17:08:17.491175",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "SG"
+    ],
+    "action_names": [
+      "auto_topup_on",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_8f5f380f",
+    "name": "资金信号排序降权",
+    "category": "general",
+    "principle": "近期行为呈收缩或手调趋势时，强制剥离余额静态权重，防资金信号一票否决覆盖真实意图。",
+    "when_to_apply": "近24h含预算/出价/ROAS下调记录，且候选池含Increase类卡片。",
+    "how_to_apply": "将balance权重降至基准线下，对同向Increase卡强制降档或过滤。",
+    "confidence": 0.95,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T17:10:46.340086",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "VN",
+      "TH",
+      "ID",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_budget_decrease",
+      "smax_am_x_max_cpc_decrease",
+      "sd_am_budget_decrease",
+      "smax_am_troi_increase",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "高余额盲目触发扩量覆盖手调意图"
+  },
+  {
+    "skill_id": "skill_bad_ebda3a0f",
+    "name": "冷启重启观察期路由",
+    "category": "general",
+    "principle": "识别零消耗或广告重启状态，设立扩量观察期，优先基建引导，阻断盲目加预算。",
+    "when_to_apply": "l7d_spend为0、balance未知，或计划近2h内OFF转ON且无消耗。",
+    "how_to_apply": "过滤所有increase卡，置顶充值或创建卡，设置3-6h缓冲期。",
+    "confidence": 0.92,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T17:10:46.340629",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "VN",
+      "TH",
+      "ID",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_budget_decrease",
+      "smax_am_x_max_cpc_decrease",
+      "sd_am_budget_decrease",
+      "smax_am_troi_increase",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "冷启重启零耗期误判为扩量需求"
+  },
+  {
+    "skill_id": "skill_bad_1d8eb96c",
+    "name": "跨参联合收缩拦截",
+    "category": "general",
+    "principle": "构建多参数联合负向打分机制，多维同步下调或复合负向状态触发绝对拦截。",
+    "when_to_apply": "近24h预算与出价同降，或叠加广告关闭/保障失效等≥2项负向特征。",
+    "how_to_apply": "触发组合拦截，禁止提效扩量卡进Top3，切换保守或充值策略。",
+    "confidence": 0.89,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T17:10:46.340634",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "VN",
+      "TH",
+      "ID",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_budget_decrease",
+      "smax_am_x_max_cpc_decrease",
+      "sd_am_budget_decrease",
+      "smax_am_troi_increase",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "孤立解析字段忽略多参同降复合态"
+  },
+  {
+    "skill_id": "skill_bad_9956e8dc",
+    "name": "渠道效能阈值门禁",
+    "category": "general",
+    "principle": "拆分渠道扩量逻辑，引入消耗转化与ROI阈值，防低效渠道机械套用扩量规则。",
+    "when_to_apply": "候选含特定渠道预算提升卡，且该渠道资耗比低于基线或ROI未达标。",
+    "how_to_apply": "增加渠道独立校验，未达阈值时强制降权increase卡，转保守推荐。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T17:10:46.340637",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "VN",
+      "TH",
+      "ID",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_budget_decrease",
+      "smax_am_x_max_cpc_decrease",
+      "sd_am_budget_decrease",
+      "smax_am_troi_increase",
+      "smax_am_x_troi_increase",
+      "sd_aa_budget_decrease"
+    ],
+    "failure_pattern": "渠道策略泛化低效消耗盲目扩量"
+  },
+  {
+    "skill_id": "skill_good_9a0f5de6",
+    "name": "smax_标签族直连",
+    "category": "general",
+    "principle": "将smax_am_x_create与smax_aa_troi_decrease归一化为高优扩量意图族，置信达标时越权接管排序。",
+    "when_to_apply": "日志或候选池命中smax_前缀标签且confidence≥0.8，无论上游State/决策点字段是否为空。",
+    "how_to_apply": "建立smax_白名单，命中后直接映射至创建/降tROI扩量流首位，跳过常规状态机交叉验证。",
+    "confidence": 0.9,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T17:54:09.867869",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "TH",
+      "PH",
+      "SG"
+    ],
+    "action_names": [
+      "smax_aa_troi_decrease",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_f16ba803",
+    "name": "跨站模型动作适配",
+    "category": "general",
+    "principle": "识别smax_标签在PH/SG/TH的高胜率同构性，建立统一的模型意图到区域偏好动作的映射表。",
+    "when_to_apply": "PH/SG/TH多站点并发触发smax_标签，且本地启发式规则或资金水位逻辑存在冲突时。",
+    "how_to_apply": "以smax_标签为路由锚点，PH/SG优先承接创建流，TH优先承接降tROI扩量流，压制本地碎片规则。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T17:54:09.868453",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "TH",
+      "PH",
+      "SG"
+    ],
+    "action_names": [
+      "smax_aa_troi_decrease",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_94f8ea12",
+    "name": "置信窄带稳态路由",
+    "category": "general",
+    "principle": "利用0.8-0.92高置信窄带的稳定性建立免校验直连通道，降低系统决策延迟与规则摩擦。",
+    "when_to_apply": "模型输出置信度连续落于0.8-0.92稳定区间，且账户未触及资金枯竭或强负向收缩熔断线。",
+    "how_to_apply": "启用窄带直驱模式，剥离冗余的资耗比与计划数校验权重，按标签语义直接输出对应工具卡片。",
+    "confidence": 0.86,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T17:54:09.868460",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "TH",
+      "PH",
+      "SG"
+    ],
+    "action_names": [
+      "smax_aa_troi_decrease",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_f42a0455",
+    "name": "近期手调同维冷却盾",
+    "category": "general",
+    "principle": "识别近期手动调参或功能激活，建立同维推荐冷却期与语义去重，防冗余打扰。",
+    "when_to_apply": "近30-60分钟内seller_behavior含预算/tROI手动调整或功能激活，且候选池含同维increase卡片。",
+    "how_to_apply": "对同维度或同意图卡片施加硬降权或Suppress标记，强制排至Top3之后或直接过滤。",
+    "confidence": 0.95,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T17:56:27.172546",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "ID",
+      "TH",
+      "PH",
+      "VN",
+      "SG"
+    ],
+    "action_names": [
+      "sd_aa_budget_decrease",
+      "smax_am_x_troi_increase",
+      "smax_aa_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "忽略操作冷却期致重复推荐"
+  },
+  {
+    "skill_id": "skill_bad_e92c4a04",
+    "name": "连续降参收缩期熔断",
+    "category": "general",
+    "principle": "解析连续下调序列识别保守收缩意图，建立逆势推荐熔断机制，防极性冲突。",
+    "when_to_apply": "近1-2小时内seller_behavior呈现≥2次预算或tROI/ROAS下调，或混合降参控本序列。",
+    "how_to_apply": "标记账户为保守收缩期，硬拦截所有increase类卡片，切换至维稳或诊断类推荐。",
+    "confidence": 0.9,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T17:56:27.172579",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "ID",
+      "TH",
+      "PH",
+      "VN",
+      "SG"
+    ],
+    "action_names": [
+      "sd_aa_budget_decrease",
+      "smax_am_x_troi_increase",
+      "smax_aa_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "未识别连续下调序列致逆势推荐"
+  },
+  {
+    "skill_id": "skill_bad_4bb859dc",
+    "name": "关停停用态增长拦截",
+    "category": "general",
+    "principle": "建立计划状态/功能开关与增长建议的强互斥映射，无效状态触发绝对过滤。",
+    "when_to_apply": "seller_behavior或计划状态显示campaign为OFF、tROI/Guarantee为Inactive，或balance未知。",
+    "how_to_apply": "直接屏蔽对应维度的increase/优化卡片，避免向无效或停用目标推送增长策略。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T17:56:27.172589",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "ID",
+      "TH",
+      "PH",
+      "VN",
+      "SG"
+    ],
+    "action_names": [
+      "sd_aa_budget_decrease",
+      "smax_am_x_troi_increase",
+      "smax_aa_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "状态冲突未拦截致无效推荐"
+  },
+  {
+    "skill_id": "skill_bad_75be972e",
+    "name": "资耗紧平衡安全路由",
+    "category": "general",
+    "principle": "引入余额与近7天消耗比值硬阈值，资金偏紧时强制财务兜底，压制进阶优化。",
+    "when_to_apply": "wallet.balance / l7d_spend < 2，或余额绝对值低于安全水位，且候选池含tROI/budget优化卡。",
+    "how_to_apply": "强制将manual_topup或资金引导卡提至Top2，对非紧急优化卡执行联合降权或置底。",
+    "confidence": 0.92,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T17:56:27.172598",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "ID",
+      "TH",
+      "PH",
+      "VN",
+      "SG"
+    ],
+    "action_names": [
+      "sd_aa_budget_decrease",
+      "smax_am_x_troi_increase",
+      "smax_aa_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "资金水位判断失效致优先级错配"
+  },
+  {
+    "skill_id": "skill_good_109d6db7",
+    "name": "窄带高置信空态直驱",
+    "category": "general",
+    "principle": "针对smax_am_x_create在0.82-0.92窄带高置信且上下文缺失场景，以模型输出为唯一真值，跳过状态机直连创建流。",
+    "when_to_apply": "模型命中smax_am_x_create且confidence∈[0.82,0.92]，关键决策点/State字段为空，适用于PH/TH/SG。",
+    "how_to_apply": "跳过资耗比与行为序列校验，直接置顶创建卡片，采用跨站标准化模板输出，屏蔽降级与拦截逻辑。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T18:25:25.422090",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "TH",
+      "PH",
+      "SG"
+    ],
+    "action_names": [
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_81e41f97",
+    "name": "手调数值趋势硬解析",
+    "category": "general",
+    "principle": "强制提取Change Info新旧值计算差值方向，建立调参极性映射，防关键词覆盖真实意图。",
+    "when_to_apply": "近24h行为含ROI/预算/出价变更，且候选池含同维increase/decrease卡片。",
+    "how_to_apply": "解析数值升降趋势，同向设48h冷却降权，反向绝对拦截，优先顺承意图卡片。",
+    "confidence": 0.95,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T18:34:12.750309",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "sd_aa_budget_decrease",
+      "smax_am_x_troi_increase",
+      "smax_aa_troi_increase",
+      "smax_am_x_max_cpc_decrease",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "误读调参方向/关键词覆盖意图"
+  },
+  {
+    "skill_id": "skill_bad_30f1cacf",
+    "name": "扩量动量期降本熔断",
+    "category": "general",
+    "principle": "识别提预算/降目标/新建的连续扩量序列，确立扩量优先级高于降本，熔断限流卡片。",
+    "when_to_apply": "近24h呈现扩量组合操作≥2项，且候选池含budget/cpc_decrease类卡片。",
+    "how_to_apply": "建立意图优先级层级，命中扩量动量时全局抑制保守卡片，强制跟随推荐加预算/速爆。",
+    "confidence": 0.92,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T18:34:12.750341",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "sd_aa_budget_decrease",
+      "smax_am_x_troi_increase",
+      "smax_aa_troi_increase",
+      "smax_am_x_max_cpc_decrease",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "扩量信号识别失败/反向操作未拦截"
+  },
+  {
+    "skill_id": "skill_bad_d40d65e6",
+    "name": "资金续航效优硬门禁",
+    "category": "general",
+    "principle": "引入可投天数公式作为资金健康硬指标，低续航场景绝对压制效果优化，前置财务兜底。",
+    "when_to_apply": "可投天数(balance/(l7d_spend/7))<3天，且候选池含tROI/CPC优化卡。",
+    "how_to_apply": "触发低水位熔断，全局抑制效优卡片，强制锁定topup/budget类至Top3，资金恢复后放开。",
+    "confidence": 0.93,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T18:34:12.750350",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "sd_aa_budget_decrease",
+      "smax_am_x_troi_increase",
+      "smax_aa_troi_increase",
+      "smax_am_x_max_cpc_decrease",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "资金权重过低/效优逻辑越权"
+  },
+  {
+    "skill_id": "skill_bad_4b927a26",
+    "name": "冷启激活期限制休眠",
+    "category": "general",
+    "principle": "识别新建或策略功能激活窗口，设立数据积累保护期，休眠收紧类动作防打断模型学习。",
+    "when_to_apply": "近24h含计划新建/重启或保障功能激活，且账户处于冷启或低耗积累阶段。",
+    "how_to_apply": "压制increase等限制类卡片24h，优先推荐监控/加品/稳预算卡，消耗稳定后放开调优。",
+    "confidence": 0.86,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T18:34:12.750356",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "sd_aa_budget_decrease",
+      "smax_am_x_troi_increase",
+      "smax_aa_troi_increase",
+      "smax_am_x_max_cpc_decrease",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "学习期规则缺失/误将激活当调优"
+  },
+  {
+    "skill_id": "skill_bad_694d57ae",
+    "name": "单信号越权交叉否决",
+    "category": "general",
+    "principle": "构建资金/行为/时间窗交叉验证漏斗，多维状态冲突时触发联合降权，防单点特征盲目驱动。",
+    "when_to_apply": "排序逻辑过度依赖单一指标触发，且其他核心维度呈反向、矛盾或触及阈值。",
+    "how_to_apply": "强制双维以上状态校验，任一维度触发抑制条件即执行联合否决，重置排序权重防越权。",
+    "confidence": 0.89,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T18:34:12.750363",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "TH",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "sd_aa_budget_decrease",
+      "smax_am_x_troi_increase",
+      "smax_aa_troi_increase",
+      "smax_am_x_max_cpc_decrease",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "多模态校验缺失/单维指标盲目驱动"
+  },
+  {
+    "skill_id": "skill_good_5913969d",
+    "name": "窄带置信防降级盾",
+    "category": "general",
+    "principle": "0.8-0.92置信窄带呈现强稳定性，需建立防降级机制，阻断系统因特征稀疏或规则冲突触发的保守降权。",
+    "when_to_apply": "模型置信度落于0.8-0.92区间，且上游特征解析返回空值、低置信或与其他静态指标存在逻辑摩擦。",
+    "how_to_apply": "锁定该置信区间为高优通行带，强制压制保守提效/财务兜底卡片，维持扩量创建策略的排序刚性。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T19:02:46.581265",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH"
+    ],
+    "action_names": [
+      "manual_topup",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_f3072b40",
+    "name": "近期手调需求证伪",
+    "category": "general",
+    "principle": "近期已手动调整某参数即代表该维需求已满足，严禁将“已操作”误读为“强需求”，强制同维卡片降权或冷却。",
+    "when_to_apply": "近2小时内seller_behavior含预算/tROI/出价手动变更，且候选池含同维increase或优化卡片。",
+    "how_to_apply": "触发同维卡片降权3档或过滤，切换至互补维度推荐，设立24h观察期防重复干预。",
+    "confidence": 0.95,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T19:06:01.265509",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "ID",
+      "TH",
+      "PH",
+      "MY",
+      "SG"
+    ],
+    "action_names": [
+      "sd_aa_budget_decrease",
+      "smax_am_x_budget_decrease",
+      "smax_am_x_troi_increase",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "将近期已操作误判为待优化信号"
+  },
+  {
+    "skill_id": "skill_bad_02cb4d5b",
+    "name": "异常资态增长熔断",
+    "category": "general",
+    "principle": "余额unknown或l7d_spend=0属无效或高危投放态，绝对拦截预算增加推荐，防断投或盲目扩量。",
+    "when_to_apply": "wallet.balance为unknown/极低，或l7d_spend=0，且候选池含budget_increase类卡片。",
+    "how_to_apply": "强制扩预算卡片沉底，置顶充值/激活/基础设置卡，叠加近期操作冷却逻辑。",
+    "confidence": 0.9,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T19:06:01.266654",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "ID",
+      "TH",
+      "PH",
+      "MY",
+      "SG"
+    ],
+    "action_names": [
+      "sd_aa_budget_decrease",
+      "smax_am_x_budget_decrease",
+      "smax_am_x_troi_increase",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "忽略资金异常/零耗盲目推扩预算"
+  },
+  {
+    "skill_id": "skill_bad_67ef66f1",
+    "name": "动态收缩覆盖静态",
+    "category": "general",
+    "principle": "连续降参或明确收缩行为序列的决策权重绝对高于高余额等静态指标，防静态数据覆盖实时意图。",
+    "when_to_apply": "近24h行为日志呈现连续预算/出价/tROI下调，或明确收缩趋势，但静态指标触发增长逻辑。",
+    "how_to_apply": "临时剥离钱包余额排序权重，强制打压increase类卡片，全局切换至维稳控本策略。",
+    "confidence": 0.92,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T19:06:01.266666",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "ID",
+      "TH",
+      "PH",
+      "MY",
+      "SG"
+    ],
+    "action_names": [
+      "sd_aa_budget_decrease",
+      "smax_am_x_budget_decrease",
+      "smax_am_x_troi_increase",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "静态充裕指标覆盖动态收缩意图"
+  },
+  {
+    "skill_id": "skill_bad_0f36c767",
+    "name": "存量调优新建互斥",
+    "category": "general",
+    "principle": "卖家近期聚焦存量计划参数调整时判定为存量优化期，严格压制creation卡片防抢占排序。",
+    "when_to_apply": "近1小时内seller_behavior含存量计划预算/设置修改，且campaign_count偏低或适中。",
+    "how_to_apply": "建立新建与存量优化互斥逻辑，降权creation卡，优先排序预算/出价优化或诊断卡。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T19:06:01.266672",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "ID",
+      "TH",
+      "PH",
+      "MY",
+      "SG"
+    ],
+    "action_names": [
+      "sd_aa_budget_decrease",
+      "smax_am_x_budget_decrease",
+      "smax_am_x_troi_increase",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "新建卡片触发过宽挤占存量优化"
+  },
+  {
+    "skill_id": "skill_good_478436a0",
+    "name": "多维扩量聚合路由",
+    "category": "general",
+    "principle": "识别创建、提预算、降tROI信号共现，聚合为统一扩量意图，优先输出组合工具链。",
+    "when_to_apply": "候选池或日志同时命中smax_am_x_create、budget_increase、troi_decrease中≥2项，且置信度均>0.75。",
+    "how_to_apply": "合并同类扩量卡片置顶，屏蔽控本推荐，按基建-资金-门槛顺序串联输出。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T18:34:55.311023",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_troi_decrease",
+      "smax_am_x_troi_decrease",
+      "smax_am_x_budget_unlimited",
+      "smax_am_x_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_cdca0b69",
+    "name": "区域扩量偏好适配",
+    "category": "general",
+    "principle": "基于站点胜率差异动态匹配扩量方向：PH侧重预算直提，SG/MY/ID侧重新建与降门槛。",
+    "when_to_apply": "模型触发扩量类标签且置信度>0.8，需按PH/SG/MY/ID站点特征分化排序策略。",
+    "how_to_apply": "PH优先budget_increase，SG/MY/ID优先create与troi_decrease，适配本地资金阈值。",
+    "confidence": 0.82,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T18:34:55.311049",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_troi_decrease",
+      "smax_am_x_troi_decrease",
+      "smax_am_x_budget_unlimited",
+      "smax_am_x_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_f58046c3",
+    "name": "同族模型批量直驱",
+    "category": "general",
+    "principle": "同族模型批量输出高置信标签时视为强意图确认，越权接管排序并压缩常规校验链路。",
+    "when_to_apply": "单次请求或短窗内命中≥2个smax_am_x_族标签，且置信度集中分布于0.75-0.92。",
+    "how_to_apply": "跳过状态机交叉验证，按标签语义直接映射对应卡片，维持原始置信度排序输出。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T18:34:55.311054",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_troi_decrease",
+      "smax_am_x_troi_decrease",
+      "smax_am_x_budget_unlimited",
+      "smax_am_x_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_a8982fa6",
+    "name": "预算突破基建协同",
+    "category": "general",
+    "principle": "预算上调或转无限时强制绑定新建或降tROI动作，确保资金释放有流量承接载体防浪费。",
+    "when_to_apply": "候选池含budget_increase或unlimited卡片，且账户近24h无新建或tROI偏高。",
+    "how_to_apply": "将预算卡与create/troi卡捆绑推荐，缺乏承接基建则降权预算卡并提示先拓矩阵。",
+    "confidence": 0.8,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T18:34:55.311058",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_troi_decrease",
+      "smax_am_x_troi_decrease",
+      "smax_am_x_budget_unlimited",
+      "smax_am_x_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_34e6498d",
+    "name": "负向操作互斥抑制",
+    "category": "general",
+    "principle": "建立近期负向调整与正向推荐卡的硬性互斥逻辑，防止默认增长规则覆盖明确收缩意图。",
+    "when_to_apply": "近24h内含预算/出价/ROAS下调、功能关闭或计划ON转OFF等≥1项负向操作。",
+    "how_to_apply": "强制压制同维increase卡片，优先匹配decrease/充值/优化卡，切断高余额与扩量绑定。",
+    "confidence": 0.95,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T18:37:05.729558",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "负向收缩信号被增长规则覆盖"
+  },
+  {
+    "skill_id": "skill_bad_b5d319b1",
+    "name": "资金饱和度门禁",
+    "category": "general",
+    "principle": "引入钱包利用率阈值判断，资金严重闲置或低效投放时压制预算增加，防盲目追高。",
+    "when_to_apply": "wallet.balance/l7d_spend>10或l7d_spend/balance<0.1，且消耗无上升趋势。",
+    "how_to_apply": "全局降权budget_increase，优先推bidding/tROI优化或投放指导，待利用率回升后放行。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T18:37:05.729574",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "高余额低消耗触发盲目加预算"
+  },
+  {
+    "skill_id": "skill_bad_e3925d0f",
+    "name": "冷启零耗预算熔断",
+    "category": "general",
+    "principle": "补全冷启动与零消耗边界条件，无投放数据时硬拦截预算推荐，前置曝光与出价基建。",
+    "when_to_apply": "l7d_spend=0、balance未知或计划创建/重启<3天，处于冷启数据积累期。",
+    "how_to_apply": "强制压制所有budget_increase卡片，优先推荐creation/bidding设置或激活引导。",
+    "confidence": 0.9,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T18:37:05.729579",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "零耗冷启期误推预算增加"
+  },
+  {
+    "skill_id": "skill_bad_a6b038b5",
+    "name": "新建测试期扩量解耦",
+    "category": "general",
+    "principle": "识别新建伴随高频设置变更的测试特征，解耦创建信号与扩量推荐，防精细化调优误判。",
+    "when_to_apply": "近24h含新建计划且伴随≥3次参数/投放位修改，消耗未稳或处于频繁建删期。",
+    "how_to_apply": "降低budget_increase权重，优先推tROI/bidding优化，仅消耗稳升时放行扩量。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T18:37:05.729584",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "测试期频繁调参误判为扩量"
+  },
+  {
+    "skill_id": "skill_good_9a9a6d7c",
+    "name": "跨域高置信窄带直驱",
+    "category": "general",
+    "principle": "smax_am_x_族在PH/SG/MY/ID稳定落于0.8-0.95窄带，确立为跨市场扩量真值，屏蔽区域规则碎片化干扰。",
+    "when_to_apply": "模型输出smax_am_x_族标签且confidence∈[0.8,0.95]，覆盖多站点并发或单站触发场景。",
+    "how_to_apply": "跳过区域启发式规则与静态指标交叉验证，直接锁定对应扩量卡片首位输出。",
+    "confidence": 0.92,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T18:49:59.778166",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_troi_decrease",
+      "smax_am_x_troi_decrease",
+      "smax_am_x_budget_unlimited",
+      "smax_am_x_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_ade22779",
+    "name": "扩量链路依赖编排",
+    "category": "general",
+    "principle": "create、budget_increase、troi_decrease构成连贯拿量序列，需按基建-资金-门槛依赖关系链式推荐。",
+    "when_to_apply": "短窗内或同批请求中命中≥2个smax_am_x_族扩量标签，且置信度均>0.8。",
+    "how_to_apply": "按“新建基建→资金释放→门槛放宽”逻辑依赖顺序，链式组装并排序工具卡片。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T18:49:59.778185",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_troi_decrease",
+      "smax_am_x_troi_decrease",
+      "smax_am_x_budget_unlimited",
+      "smax_am_x_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_37da1378",
+    "name": "区域模型动作转译",
+    "category": "general",
+    "principle": "同族扩量意图存在区域执行分化，需按站点历史胜率建立模型标签到首选动作的动态映射表。",
+    "when_to_apply": "smax_am_x_族标签触发且置信度>0.8，需区分PH/SG/MY/ID站点输出策略。",
+    "how_to_apply": "PH优先budget/create，SG/MY/ID优先troi_decrease/unlimited，动态调整排序权重。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T18:49:59.778190",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_troi_decrease",
+      "smax_am_x_troi_decrease",
+      "smax_am_x_budget_unlimited",
+      "smax_am_x_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_c75c8a70",
+    "name": "负向极性覆盖路由",
+    "category": "general",
+    "principle": "建立动态行为极性绝对优先机制，识别收缩信号强制覆盖静态增长默认值。",
+    "when_to_apply": "近24h含预算下调、计划OFF/删除、ROAS上调或连续负向操作。",
+    "how_to_apply": "拦截increase卡并沉底；极性切换至控本/唤醒/基建，阻断默认增长。",
+    "confidence": 0.96,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T18:52:24.929460",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "负向意图识别失效，默认增长覆盖实操"
+  },
+  {
+    "skill_id": "skill_bad_90173846",
+    "name": "资耗极值启发式衰减",
+    "category": "general",
+    "principle": "引入余额比例衰减函数与缺失值兜底，资金极充裕或数据缺失时中和预算权重。",
+    "when_to_apply": "余额/周耗>10倍、balance未知/0，或l7d_spend=0冷启期。",
+    "how_to_apply": "超阈值或缺失时neutralize预算增加卡；重心切换至效优/充值/基建。",
+    "confidence": 0.94,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T18:52:24.929478",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "余额规则僵化，缺失场景盲目激进"
+  },
+  {
+    "skill_id": "skill_bad_ab9de29a",
+    "name": "跨维优化财务门禁",
+    "category": "general",
+    "principle": "建立效优卡与资金健康度强依赖，低水位压制优化；严格锁定调参方向防倒挂。",
+    "when_to_apply": "候选含tROI/bidding卡，且余额<1.5倍周耗或卖家明确调整ROAS方向。",
+    "how_to_apply": "低余额降权效优卡优先财务兜底；优化卡极性须与iopRoas变更严格同向。",
+    "confidence": 0.89,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T18:52:24.929482",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "财务与优化解耦，调参方向未对齐"
+  },
+  {
+    "skill_id": "skill_bad_47db0255",
+    "name": "测款震荡期扩量解耦",
+    "category": "general",
+    "principle": "识别高频建删试错特征，剥离静态资金对预算推荐的绑定，防测试期误判扩量。",
+    "when_to_apply": "近24h计划create/remove频次>3，或状态频繁切换且消耗未稳。",
+    "how_to_apply": "标记测试期压制budget_increase；转向投放测试/出价/数据积累引导。",
+    "confidence": 0.87,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T18:52:24.929486",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "财务与测试期解耦，高频试错误判"
+  },
+  {
+    "skill_id": "skill_good_5c2d0a15",
+    "name": "跨站置信基线校准",
+    "category": "general",
+    "principle": "PH站smax族标签置信稳定偏高，SG/MY/ID略宽，需按站点动态设定免检阈值。",
+    "when_to_apply": "模型触发扩量标签，需区分PH与SG/MY/ID站点的推荐强度与校验严格度时。",
+    "how_to_apply": "PH站≥0.8直驱；SG/MY/ID需≥0.85或叠加活跃日志方可越权。",
+    "confidence": 0.82,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T19:04:43.741392",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_troi_decrease",
+      "smax_am_x_troi_decrease",
+      "smax_am_x_budget_unlimited",
+      "smax_am_x_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_9233173c",
+    "name": "扩量族协同编排",
+    "category": "general",
+    "principle": "create/budget/troi同属扩量族，高置信共现时按基建-资金-门槛依赖链排序。",
+    "when_to_apply": "短窗内命中≥2个smax_am_x_族标签，且置信度均落于0.75-0.95区间时。",
+    "how_to_apply": "优先create打底，基数达标且置信>0.85串联预算/降参，禁跨级跳跃。",
+    "confidence": 0.86,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T19:04:43.741408",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_troi_decrease",
+      "smax_am_x_troi_decrease",
+      "smax_am_x_budget_unlimited",
+      "smax_am_x_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_d6eda04a",
+    "name": "预算释放强校验",
+    "category": "general",
+    "principle": "budget_increase/unlimited高置信触发时，强制绑定消耗校验防资金空转。",
+    "when_to_apply": "模型输出预算类标签且confidence≥0.8，候选池含激进预算卡时。",
+    "how_to_apply": "校验近7日消耗与在线计划数，未起量或基数<5时硬拦截，降级至创建或充值。",
+    "confidence": 0.84,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T19:04:43.741413",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_troi_decrease",
+      "smax_am_x_troi_decrease",
+      "smax_am_x_budget_unlimited",
+      "smax_am_x_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_9591ba3c",
+    "name": "资金单信号越权熔断",
+    "category": "general",
+    "principle": "建立余额指标的多维交叉否决机制，防单一资金特征越权驱动扩量排序。",
+    "when_to_apply": "余额充裕或未知，但伴随l7d_spend极低、计划碎片化(>15)或高频建删测试。",
+    "how_to_apply": "强制剥离balance排序权重，屏蔽budget_increase，转向投放诊断或预算整合。",
+    "confidence": 0.94,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T19:06:58.004798",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "余额单信号覆盖低效与测试态"
+  },
+  {
+    "skill_id": "skill_bad_be7a37ca",
+    "name": "负向行为动态权重压制",
+    "category": "general",
+    "principle": "引入实时行为极性调制排序权重，负向操作触发指数级降权防默认增长误排。",
+    "when_to_apply": "近24h含计划暂停、maxBid下调、ROAS上调或保障停用等明确收缩信号。",
+    "how_to_apply": "所有increase类卡片基础分乘以衰减系数(如0.1)，优先推荐控本或decrease卡。",
+    "confidence": 0.91,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T19:06:58.004813",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "静态排序未受实时负向状态抑制"
+  },
+  {
+    "skill_id": "skill_bad_edfbf514",
+    "name": "手调完成态同维屏蔽",
+    "category": "general",
+    "principle": "解析近期手动调参完成态，建立同维需求满足校验，防系统重复推荐。",
+    "when_to_apply": "近24h内Behavior已含预算上调或ROAS/tROI手动变更，且候选池含同向卡片。",
+    "how_to_apply": "强制降级或移出同名increase卡片，转而推荐效果追踪、ROI优化或分配建议。",
+    "confidence": 0.89,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T19:06:58.004818",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "缺乏操作冷却导致重复冗余推荐"
+  },
+  {
+    "skill_id": "skill_bad_97fc0274",
+    "name": "冷启零耗默认逻辑重置",
+    "category": "general",
+    "principle": "针对零消耗与数据缺失场景重构兜底分支，阻断无依据的默认增长逻辑回退。",
+    "when_to_apply": "l7d_spend=0、balance为unknown/0，或账户处于新建/重启冷启期。",
+    "how_to_apply": "硬拦截所有increase类卡片，强制路由至auto_topup、渠道配置或新手引导。",
+    "confidence": 0.93,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T19:06:58.004822",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "缺失数据场景默认回退至增长逻辑"
+  },
+  {
+    "skill_id": "skill_good_23a6574a",
+    "name": "预算释放谱系统一",
+    "category": "general",
+    "principle": "increase与unlimited同属资金释放意图，高置信下合并路由防策略割裂。",
+    "when_to_apply": "模型输出budget_increase或budget_unlimited标签且confidence≥0.85。",
+    "how_to_apply": "统一归入预算释放池，依据当前预算类型动态匹配固定值提升或无限预算卡。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T21:49:21.416502",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_troi_decrease",
+      "smax_am_x_troi_decrease",
+      "smax_am_x_budget_unlimited",
+      "smax_am_x_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_289b25cb",
+    "name": "跨域降槛换量共识",
+    "category": "general",
+    "principle": "SG/PH/ID多站验证troi_decrease高胜率，确立效率让步为通用扩量信号。",
+    "when_to_apply": "任意站点触发troi_decrease族标签且confidence≥0.8，无明确收缩行为。",
+    "how_to_apply": "统一归类为扩量极性，拦截控本推荐，优先输出降参卡与流量宽配工具。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T21:49:21.416522",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_troi_decrease",
+      "smax_am_x_troi_decrease",
+      "smax_am_x_budget_unlimited",
+      "smax_am_x_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_c32ef008",
+    "name": "空态高置信越权直驱",
+    "category": "general",
+    "principle": "决策点与State缺失时，0.8+置信模型输出可作绝对决策源绕过状态机。",
+    "when_to_apply": "上游特征解析返回空值，但smax模型稳定输出扩量标签且confidence≥0.8。",
+    "how_to_apply": "阻断空值导致的推荐降级，以模型标签直接映射动作卡片并置顶输出。",
+    "confidence": 0.92,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T21:49:21.416526",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_troi_decrease",
+      "smax_am_x_troi_decrease",
+      "smax_am_x_budget_unlimited",
+      "smax_am_x_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_aa06083d",
+    "name": "显性收缩意图硬拦截",
+    "category": "general",
+    "principle": "识别降预算/关停/升ROAS等明确收缩信号，建立绝对互斥墙，强制压制所有扩量与提预算卡片。",
+    "when_to_apply": "近24h行为含预算下调、计划OFF/删除、ROAS上调或出价降低等≥1项保守操作。",
+    "how_to_apply": "将budget_increase类卡片权重置底，优先推荐账户诊断、充值或效果追踪卡片。",
+    "confidence": 0.95,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T21:51:15.682733",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "默认增长逻辑覆盖明确收缩意图"
+  },
+  {
+    "skill_id": "skill_bad_650d3cdd",
+    "name": "资金闲置效优门禁",
+    "category": "general",
+    "principle": "引入资金利用率阈值，高余额低消耗或数据缺失时拦截盲目扩预算，优先转向投放效率优化。",
+    "when_to_apply": "balance/l7d_spend>5，或l7d_spend=0/balance未知，且候选池含预算增加卡。",
+    "how_to_apply": "强制过滤budget_increase，转为推荐拓量工具、出价优化或基础设置检查卡片。",
+    "confidence": 0.9,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T21:51:15.682751",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "忽略资金利用率盲目触发扩预算"
+  },
+  {
+    "skill_id": "skill_bad_49ad0b93",
+    "name": "测试冷启期增长解耦",
+    "category": "general",
+    "principle": "识别高频建删或零消耗冷启特征，剥离成熟期扩量规则，防测试震荡期误判增长意图。",
+    "when_to_apply": "近24h建删频次≥3，或l7d_spend=0/账户新建<3天，处于数据积累或试错期。",
+    "how_to_apply": "压制所有increase类卡片，优先推荐基础优化、广告诊断或自动托管工具。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T21:51:15.682756",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "测试期/冷启动误套成熟扩量策略"
+  },
+  {
+    "skill_id": "skill_bad_cce084eb",
+    "name": "多维信号冲突仲裁链",
+    "category": "general",
+    "principle": "建立财务安全>动态收缩>近期操作>静态增长的硬性优先级链，冲突时高优信号一票否决。",
+    "when_to_apply": "静态指标(高余额/新建)触发增长逻辑，但动态行为或资金水位呈反向/危急状态。",
+    "how_to_apply": "按优先级链执行串行拦截，低优信号强制降权或休眠，确保推荐极性不倒挂。",
+    "confidence": 0.92,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T21:51:15.682760",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "多信号冲突时优先级错配致误排"
+  },
+  {
+    "skill_id": "skill_bad_0b76e9e7",
+    "name": "目标参数极性硬映射",
+    "category": "general",
+    "principle": "严格区分ROAS/tROI调整方向的业务语义，上调视为保效限流，下调视为放宽拓量。",
+    "when_to_apply": "行为日志含iopRoas/tROI目标值变更，且候选池含效率或预算优化卡片。",
+    "how_to_apply": "上调时压制扩量/提效卡转推控本工具；下调时解除限流拦截，优先匹配拓量链路。",
+    "confidence": 0.87,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T21:51:15.682766",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "VN",
+      "MY",
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "sd_am_budget_decrease"
+    ],
+    "failure_pattern": "目标调整方向误读致策略倒挂"
+  },
+  {
+    "skill_id": "skill_good_9f2cc2a4",
+    "name": "跨域扩量意图族统御",
+    "category": "general",
+    "principle": "将create、预算释放与降tROI归一化为高置信扩量族，抹平区域规则差异。",
+    "when_to_apply": "PH/SG/MY/ID站点触发create/budget_/troi_decrease标签，且confidence∈[0.8,0.92]。",
+    "how_to_apply": "以模型标签为跨市场决策锚点，统一路由至扩量工具链，削弱本地规则与静态指标干扰。",
+    "confidence": 0.89,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T22:09:12.608511",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "ID",
+      "SG",
+      "MY"
+    ],
+    "action_names": [
+      "smax_am_x_troi_decrease",
+      "smax_am_x_create",
+      "smax_am_x_budget_increase",
+      "smax_am_troi_decrease",
+      "smax_am_x_budget_unlimited"
+    ]
+  },
+  {
+    "skill_id": "skill_good_88c93875",
+    "name": "资槛双放协同编排",
+    "category": "general",
+    "principle": "预算释放与效率让步高置信共现时，构建资金与门槛的协同扩量链路。",
+    "when_to_apply": "短窗内并发budget_increase/unlimited与troi_decrease标签，且双置信度均≥0.85。",
+    "how_to_apply": "按资金注入-门槛放宽依赖链串行输出，硬拦截控本限流卡，防预算空转或拿量受阻。",
+    "confidence": 0.86,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T22:09:12.608534",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "ID",
+      "SG",
+      "MY"
+    ],
+    "action_names": [
+      "smax_am_x_troi_decrease",
+      "smax_am_x_create",
+      "smax_am_x_budget_increase",
+      "smax_am_troi_decrease",
+      "smax_am_x_budget_unlimited"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_19ff772a",
+    "name": "复合负向态联合门禁",
+    "category": "general",
+    "principle": "构建行为收缩、资金异常与低效投放的三维校验链，任一触底即硬拦截增长推荐。",
+    "when_to_apply": "近24h含降参/关停操作，且l7d_spend=0或balance未知/极低，或资耗比>5。",
+    "how_to_apply": "强制过滤increase卡片，降级至账户诊断、充值或收缩建议，重置排序权重。",
+    "confidence": 0.95,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T22:11:06.720845",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "PH",
+      "MY",
+      "VN",
+      "SG",
+      "TH"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "负向信号与异常资态叠加仍盲推扩量"
+  },
+  {
+    "skill_id": "skill_bad_fd8bca41",
+    "name": "同向操作饱和熔断",
+    "category": "general",
+    "principle": "识别同向高频操作后的边际收益递减，触发饱和熔断，阻断机械线性外推推荐。",
+    "when_to_apply": "近24h同维参数上调≥2次或累计幅度>30%，且消耗增速未同步放大。",
+    "how_to_apply": "抑制同向increase卡片，插入ROI审查或预算稳控卡片，防策略超配冗余。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T22:11:06.720862",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "PH",
+      "MY",
+      "VN",
+      "SG",
+      "TH"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "机械跟随近期操作忽略预算饱和信号"
+  },
+  {
+    "skill_id": "skill_bad_8ef7f0a9",
+    "name": "资效背离增长拦截",
+    "category": "general",
+    "principle": "确立动态消耗效率对静态资金指标的否决权，防高余额伪信号覆盖低效或休眠现状。",
+    "when_to_apply": "静态余额充裕或达标，但l7d_spend极低/为零，或近24h含频繁建删/关停。",
+    "how_to_apply": "剥离wallet.balance提权逻辑，增长卡强制置底，优先匹配提效或诊断策略。",
+    "confidence": 0.93,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T22:11:06.720867",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "PH",
+      "MY",
+      "VN",
+      "SG",
+      "TH"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "高余额静态特征越权覆盖低效休眠态"
+  },
+  {
+    "skill_id": "skill_bad_0e40ef45",
+    "name": "调参震荡资金联防",
+    "category": "general",
+    "principle": "参数手动变更后联动资金水位校验，设立模型学习保护期，抑制震荡期激进优化。",
+    "when_to_apply": "近24h已手动调整ROAS/tROI/预算，且balance/l7d_spend<1.5或余额逼近周耗。",
+    "how_to_apply": "对优化卡片施加冷却降权，优先推荐资金补给或观察期稳态策略，防重复触达。",
+    "confidence": 0.86,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T22:11:06.720872",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "PH",
+      "MY",
+      "VN",
+      "SG",
+      "TH"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "忽略调参震荡与资金预警导致重复推荐"
+  },
+  {
+    "skill_id": "skill_good_34645d5d",
+    "name": "活跃扩量期创建优先",
+    "category": "general",
+    "principle": "资金健康且连续扩量时，判定为主动拓量期。排序应切断充值与存量调优路径，强制路由至新建计划流。",
+    "when_to_apply": "余额/周耗>0.3且seller_behavior含频调预算/放宽ROAS/关停旧计划，账户处于流量重组或测试扩量阶段。",
+    "how_to_apply": "提权新建/智能计划卡片至首位，压制Topup、预算微调及老计划提速推荐，精准匹配增量拓展意图。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T22:34:59.392467",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "SG",
+      "MY"
+    ],
+    "action_names": [
+      "smax_am_x_troi_decrease",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_1e28674a",
+    "name": "近期操作完成态去重",
+    "category": "general",
+    "principle": "识别近1小时内已手动完成的参数设置，判定该维需求已满足，建立同向推荐静默期防冗余。",
+    "when_to_apply": "近1小时内seller_behavior含预算/ROAS/tROI手动调整，且候选池含同向卡片。",
+    "how_to_apply": "强制过滤或置底同维优化卡片，冷却期内优先推荐非干预型或下一步增量动作。",
+    "confidence": 0.95,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T22:37:09.348944",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "PH",
+      "TH",
+      "MY"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "忽略近期已执行操作导致重复推荐"
+  },
+  {
+    "skill_id": "skill_bad_11fd225d",
+    "name": "调参方向语义强校验",
+    "category": "general",
+    "principle": "严禁仅凭参数变动关键词触发推荐，必须提取新旧值计算升降方向，确保建议与意图同向。",
+    "when_to_apply": "行为日志含ROAS/预算/出价变更，且候选池含同维increase/decrease卡片时。",
+    "how_to_apply": "解析Change Info差值极性，方向相悖时硬拦截反向卡片，严格遵循意图顺从优先。",
+    "confidence": 0.92,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T22:37:09.348967",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "PH",
+      "TH",
+      "MY"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "仅做关键词匹配忽略调参方向致意图倒挂"
+  },
+  {
+    "skill_id": "skill_bad_639ae782",
+    "name": "短效生命周期过滤",
+    "category": "general",
+    "principle": "引入计划生命周期与探索期特征校验，临近结束或高频建删时屏蔽长期优化策略。",
+    "when_to_apply": "计划endDate≤24小时，或近1小时内频繁Create/Remove/开关交替≥2次。",
+    "how_to_apply": "强制降权tROI/budget优化卡，转为推荐续期、快速起量或投放指南类卡片。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T22:37:09.348973",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "PH",
+      "TH",
+      "MY"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "忽略计划临近结束或测试期特征盲目推优"
+  },
+  {
+    "skill_id": "skill_good_e99db816",
+    "name": "跨站空态直驱",
+    "category": "general",
+    "principle": "SG/PH/MY案例在上下文全空时置信度仍稳定收敛于0.8-0.95，确立模型输出为跨区绝对决策源。",
+    "when_to_apply": "关键决策点与State模式字段均为空，但smax_am_x_create置信度连续落于0.8-0.95区间。",
+    "how_to_apply": "跳过区域差异化校验与状态机补全，以模型标签为唯一真值，直接锁定创建流首位。",
+    "confidence": 0.92,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T22:58:28.010734",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "SG",
+      "MY"
+    ],
+    "action_names": [
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_f2e33c29",
+    "name": "创建置信归一",
+    "category": "general",
+    "principle": "多样本置信度高度集中于0.8-0.95窄带且方差极低，可简化分层逻辑，采用单阈值免检直驱。",
+    "when_to_apply": "批量或连续请求中smax_am_x_create置信度稳定≥0.8，且账户无降预算/关停等强收缩行为。",
+    "how_to_apply": "废弃复杂置信分层校验，统一以0.8为硬阈值触发最高优路由，压缩系统决策延迟。",
+    "confidence": 0.9,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T22:58:28.010739",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "SG",
+      "MY"
+    ],
+    "action_names": [
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_36619aad",
+    "name": "目标切换负向拦截",
+    "category": "general",
+    "principle": "识别目标切换或指标清空信号，建立ROI类卡片硬拦截，防策略与卖家新意图背离。",
+    "when_to_apply": "近24h内seller_behavior含objective切换至Sales/MaxConv，或iopRoas/tROI设为-1/清空。",
+    "how_to_apply": "强制过滤troi/roas_increase卡片，降权效优类推荐，优先匹配放量或基建动作。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T23:00:40.018960",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "PH",
+      "SG",
+      "TH",
+      "MY"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_am_x_max_cpc_decrease",
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "忽略目标切换与清空信号误推ROI卡"
+  },
+  {
+    "skill_id": "skill_bad_3b8d8fc6",
+    "name": "高资低耗测试期抑制",
+    "category": "general",
+    "principle": "校验资耗比与测试期特征，资金冗余或数据未稳时压制预算扩张，防无效推荐。",
+    "when_to_apply": "balance/l7d_spend>10或余额unknown，且近24h含高频建删/渠道切换，l7d_spend极低。",
+    "how_to_apply": "抑制budget_increase卡片，转向bidding微调、商品添加或topup引导，待消耗稳定后放开。",
+    "confidence": 0.91,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T23:00:40.018977",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "PH",
+      "SG",
+      "TH",
+      "MY"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_am_x_max_cpc_decrease",
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "资金冗余或测试期盲目触发预算增加"
+  },
+  {
+    "skill_id": "skill_bad_a7511143",
+    "name": "出价调优效果门槛",
+    "category": "general",
+    "principle": "出价类推荐需绑定效果数据基线，缺失转化支撑或维度错配时强制降权。",
+    "when_to_apply": "候选池含max_cpc/bidding卡片，但近期CTR/CVR低于基线或seller_behavior聚焦预算调整。",
+    "how_to_apply": "拦截出价提效卡，降权至Top3后，优先推荐预算分配或拓量卡片，待效果达标后恢复。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T23:00:40.018981",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "PH",
+      "SG",
+      "TH",
+      "MY"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_am_x_max_cpc_decrease",
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "缺乏效果数据支撑盲目推荐出价调整"
+  },
+  {
+    "skill_id": "skill_bad_f774698f",
+    "name": "预算时序极性互斥",
+    "category": "general",
+    "principle": "解析预算手动调整方向与时序，建立同向冷却与反向互斥墙，防冗余或冲突推荐。",
+    "when_to_apply": "近1-2小时内seller_behavior含budget increase/decrease记录，且候选池含budget_increase卡。",
+    "how_to_apply": "同向操作触发24h冷却降权，反向操作直接标记Negative过滤，严格对齐卖家实操极性。",
+    "confidence": 0.93,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T23:00:40.018986",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "PH",
+      "SG",
+      "TH",
+      "MY"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_am_x_max_cpc_decrease",
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "预算手调后同向冗余或反向冲突推荐"
+  },
+  {
+    "skill_id": "skill_bad_ecd98e50",
+    "name": "资金缺失态硬拦截",
+    "category": "general",
+    "principle": "构建资金异常态绝对门禁，低水位或缺失值触发财务兜底，压制所有策略优化卡。",
+    "when_to_apply": "balance为unknown/0，或balance<l7d_spend/3，或l7d_spend=0且无有效消耗基线。",
+    "how_to_apply": "硬拦截budget/ROI优化卡，强制topup或基础检查卡提权至Top2，建立资金安全优先链路。",
+    "confidence": 0.95,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T23:00:40.018990",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "PH",
+      "SG",
+      "TH",
+      "MY"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_am_x_max_cpc_decrease",
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease"
+    ],
+    "failure_pattern": "资金异常或枯竭时未触发充值兜底"
+  },
+  {
+    "skill_id": "skill_good_ab11e773",
+    "name": "空态建资固定序列",
+    "category": "general",
+    "principle": "上下文缺失时按样本分布确立先建后资铁律，防预算空转。",
+    "when_to_apply": "决策点/State全空，且create与budget_increase标签共现置信度≥0.8。",
+    "how_to_apply": "强制create卡片绝对优先，budget卡仅作为创建后的次级协同推荐输出。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-05T13:31:50.523394",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "MY",
+      "TH",
+      "PH",
+      "SG"
+    ],
+    "action_names": [
+      "smax_am_x_budget_increase",
+      "sd_am_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_817abcbf",
+    "name": "四站置信基线对齐",
+    "category": "general",
+    "principle": "PH/MY/SG/TH置信高度收敛，以0.8为统一硬门槛抹平区域阈值差异。",
+    "when_to_apply": "多站点并发触发扩量标签，且各站本地校验规则或触发阈值存在分歧时。",
+    "how_to_apply": "废弃分站差异化阈值，锁定0.8为跨区通用免检线，达标即执行标准化路由。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-05T13:31:50.523411",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "MY",
+      "TH",
+      "PH",
+      "SG"
+    ],
+    "action_names": [
+      "smax_am_x_budget_increase",
+      "sd_am_budget_increase",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_f24cfe93",
+    "name": "预算操作时效衰减",
+    "category": "general",
+    "principle": "识别近期预算手动调整记录，引入时间衰减因子与同向饱和熔断，防新鲜操作被机械重复推荐。",
+    "when_to_apply": "近12-24h内seller_behavior含预算手动变更，且候选池含同维budget卡片时。",
+    "how_to_apply": "解析操作时间戳，12h内同类推荐权重指数衰减；同向累计调整超阈值触发冷却，转向效优卡片。",
+    "confidence": 0.91,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-05T13:34:18.538864",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "MY",
+      "TH",
+      "PH",
+      "VN"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_aa_budget_decrease",
+      "smax_am_x_budget_decrease",
+      "smax_am_budget_decrease"
+    ],
+    "failure_pattern": "忽略操作新鲜度与边际效用致冗余推荐"
+  },
+  {
+    "skill_id": "skill_bad_cd682481",
+    "name": "混合行为净向聚合",
+    "category": "general",
+    "principle": "面对多计划预算升降交织或频繁建删，强制统计净变化方向与主导意图，防局部正向特征绑架排序。",
+    "when_to_apply": "近24h行为日志含多条预算变更(有升有降)或高频Create/Remove，且拟推扩量卡时。",
+    "how_to_apply": "计算净调向占比与操作频次；若下调主导或处于测试期，压制increase，转向诊断或控本卡片。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-05T13:34:18.538882",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "MY",
+      "TH",
+      "PH",
+      "VN"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_aa_budget_decrease",
+      "smax_am_x_budget_decrease",
+      "smax_am_budget_decrease"
+    ],
+    "failure_pattern": "多意图混合时局部信号放大导致误排"
+  },
+  {
+    "skill_id": "skill_bad_0fdc8ab8",
+    "name": "资态负向权重剥离",
+    "category": "general",
+    "principle": "确立动态收缩意图对静态资金指标的绝对否决权，检测到明确降预算行为时强制剥离余额正向权重。",
+    "when_to_apply": "静态余额充足或资耗比健康，但近24h行为日志呈现明确预算下调、出价降低或保守控本序列时。",
+    "how_to_apply": "临时清零wallet正向打分，对budget_increase施加硬拦截，优先匹配降预算或暂停卡片。",
+    "confidence": 0.93,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-05T13:34:18.538887",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "MY",
+      "TH",
+      "PH",
+      "VN"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_aa_budget_decrease",
+      "smax_am_x_budget_decrease",
+      "smax_am_budget_decrease"
+    ],
+    "failure_pattern": "静态资金指标越权覆盖动态负向意图"
+  },
+  {
+    "skill_id": "skill_bad_772d8731",
+    "name": "预算推荐串行门禁",
+    "category": "general",
+    "principle": "建立资金安全>行为极性>常规指标的硬性决策树，多状态冲突时执行串行校验，防规则并行优先级错乱。",
+    "when_to_apply": "候选池生成budget_increase推荐前，需同步校验wallet阈值、行为方向与近期操作窗。",
+    "how_to_apply": "按优先级树逐项过滤：余额触底推充值，行为负向则拦截，双校验通过方可放行，杜绝单信号越权。",
+    "confidence": 0.89,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-05T13:34:18.538892",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "MY",
+      "TH",
+      "PH",
+      "VN"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_aa_budget_decrease",
+      "smax_am_x_budget_decrease",
+      "smax_am_budget_decrease"
+    ],
+    "failure_pattern": "多规则并行冲突时优先级错乱致误排"
+  },
+  {
+    "skill_id": "skill_good_b8bde547",
+    "name": "空态创降双链直驱",
+    "category": "general",
+    "principle": "上下文全空时create与troi_decrease高置信共现，揭示基建与降槛的强伴生关系，需合并为统一扩量链路直出。",
+    "when_to_apply": "关键决策点/State均为空，且smax_am_x_create与troi_decrease标签置信度均落于0.8-0.92区间。",
+    "how_to_apply": "跳过状态机校验，按“先建计划-后降tROI”依赖顺序串行输出，阻断单卡碎片化推荐。",
+    "confidence": 0.87,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-05T16:18:21.969981",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_decrease",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_bad_80a66c5b",
+    "name": "日志数值变更硬解析",
+    "category": "general",
+    "principle": "强制提取Change Info新旧值计算差值方向，建立极性映射，防关键词覆盖真实意图。",
+    "when_to_apply": "日志含预算/ROAS/出价具体数值变更(如-1转正数、目标值升降)。",
+    "how_to_apply": "计算差值定极性，降参或无限转封顶标记为强收缩，直接压制反向增长卡。",
+    "confidence": 0.93,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-05T16:20:18.426021",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "MY",
+      "PH",
+      "TH"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_aa_max_cpc_decrease",
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "smax_aa_budget_decrease"
+    ],
+    "failure_pattern": "未解析数值变更方向致意图倒挂"
+  },
+  {
+    "skill_id": "skill_bad_ac33bb66",
+    "name": "资耗极值双向门禁",
+    "category": "general",
+    "principle": "建立资金枯竭与饱和双阈值门禁，极端水位均压制预算扩张，防脱离实际支付力或冗余推荐。",
+    "when_to_apply": "wallet.balance/l7d_spend<0.2(枯竭) 或 >10/近期上调>20%(饱和)。",
+    "how_to_apply": "枯竭期强推充值/降预算，饱和期降权预算卡转推素材/出价优化。",
+    "confidence": 0.9,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-05T16:20:18.426036",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "MY",
+      "PH",
+      "TH"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_aa_max_cpc_decrease",
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "smax_aa_budget_decrease"
+    ],
+    "failure_pattern": "资金极值态盲目触发预算扩张"
+  },
+  {
+    "skill_id": "skill_bad_38c35961",
+    "name": "结构调整与重启防误判",
+    "category": "general",
+    "principle": "多信号冲突时计算行为净向，识别结构调整或重启测试，防局部正向特征绑架排序。",
+    "when_to_apply": "日志同时含正向(延期/重启)与负向(删除/关停)信号，或高频建删震荡。",
+    "how_to_apply": "负向/测试信号优先，压制扩量预算卡，优先推荐控本或观察期策略。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-05T16:20:18.426061",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "MY",
+      "PH",
+      "TH"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_aa_max_cpc_decrease",
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "smax_aa_budget_decrease"
+    ],
+    "failure_pattern": "混合信号中正向特征越权误判"
+  },
+  {
+    "skill_id": "skill_bad_cc331ef3",
+    "name": "预算增长默认兜底剥离",
+    "category": "general",
+    "principle": "废除预算增长作为无条件兜底策略，建立多维意图校验链，无明确扩量信号时强制降级。",
+    "when_to_apply": "系统依赖默认规则将budget_increase排Top1，但缺乏消耗瓶颈或主动扩量行为。",
+    "how_to_apply": "剥离默认高优权重，无强扩量特征时自动沉底，转推诊断或存量优化卡。",
+    "confidence": 0.92,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-05T16:20:18.426065",
+    "last_validated": null,
+    "case_type": "bad",
+    "ventures": [
+      "SG",
+      "MY",
+      "PH",
+      "TH"
+    ],
+    "action_names": [
+      "sd_am_budget_decrease",
+      "smax_aa_max_cpc_decrease",
+      "smax_am_x_troi_increase",
+      "smax_am_x_budget_decrease",
+      "smax_aa_budget_decrease"
+    ],
+    "failure_pattern": "机械默认规则致增长卡盲目置顶"
+  }
+]

@@ -1,0 +1,24 @@
+[
+  {
+    "skill_id": "skill_good_605c2bd3",
+    "name": "模型降tROI扩量切换",
+    "category": "TH",
+    "principle": "识别smax_aa_troi_decrease高置信信号，判定为效率让步换量意图，强制切换至扩量矩阵与速爆工具链。",
+    "when_to_apply": "命中smax_aa_troi_decrease标签且置信度≥0.8，或TH市场出现明确tROI下调模型预测时。",
+    "how_to_apply": "拦截提效控本类卡片，优先推荐新建计划、速爆起量及预算上调工具，顺应降槛拿量诉求。",
+    "confidence": 0.85,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T16:04:56.800605",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "SG",
+      "TH"
+    ],
+    "action_names": [
+      "smax_aa_troi_decrease",
+      "smax_am_x_create"
+    ]
+  }
+]

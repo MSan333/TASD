@@ -1,0 +1,132 @@
+[
+  {
+    "skill_id": "skill_good_0b79257a",
+    "name": "PH市场矩阵优先",
+    "category": "PH",
+    "principle": "PH样本高度集中于创建动作，反映该市场偏好通过计划矩阵而非单计划调优获取流量。",
+    "when_to_apply": "站点为PH，账户计划基数未饱和或处于活跃上新期，且资金水位支持连续投放。",
+    "how_to_apply": "PH站点默认提升创建卡基础权重，降低速爆触发门槛，压制单计划深度优化推荐。",
+    "confidence": 0.8,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T15:18:03.134718",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "MY",
+      "SG",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_rapid_boost",
+      "smax_am_x_create",
+      "smax_aa_troi_decrease"
+    ]
+  },
+  {
+    "skill_id": "skill_good_852549b7",
+    "name": "创建模型信号直连",
+    "category": "PH",
+    "principle": "命中smax_am_x_create标签时建立意图直连，以模型信号覆盖静态指标，保障创建流顺畅。",
+    "when_to_apply": "候选池或日志命中smax_am_x_create标签，且账户处于PH/TH市场或呈现明确新建会话特征时。",
+    "how_to_apply": "将该标签作为强意图特征直接提权创建卡，仅保留资金枯竭硬拦截，屏蔽同维优化与充值推荐。",
+    "confidence": 0.5,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T15:59:03.060929",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "TH",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_8dc9cf65",
+    "name": "自动充值协同创建",
+    "category": "PH",
+    "principle": "识别auto_topup_on与创建模型高置信共现，判定为托管型扩量意图，财务自动化与基建卡片强绑定。",
+    "when_to_apply": "PH/SG站点模型同时输出auto_topup_on与smax_am_x_create，且双标签置信度均≥0.85。",
+    "how_to_apply": "置顶自动充值开通卡，同步优先推荐批量创建工具，拦截手动充值与单计划调优卡片。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T17:08:17.489916",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "SG"
+    ],
+    "action_names": [
+      "auto_topup_on",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_a711250b",
+    "name": "PH空态模型直驱",
+    "category": "PH",
+    "principle": "PH站点smax_am_x_create在上下文全空时仍保持0.8+高胜率，确立模型标签为绝对决策源，绕过状态机盲区。",
+    "when_to_apply": "站点为PH，关键决策点/State/策略字段均为空，但模型输出smax_am_x_create且confidence≥0.8。",
+    "how_to_apply": "禁用空值降级与默认兜底逻辑，直接以模型标签映射创建类卡片首位，保障高置信意图无损承接。",
+    "confidence": 0.9,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T19:02:46.580779",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH"
+    ],
+    "action_names": [
+      "manual_topup",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_7d45d64e",
+    "name": "资建伴生串联路由",
+    "category": "PH",
+    "principle": "manual_topup与创建标签同批出现，揭示资金注入与矩阵基建的强伴生关系，需建立财务到基建的串联响应。",
+    "when_to_apply": "PH站点近24h含充值行为或余额回升，且同期模型触发创建标签（置信度≥0.75）。",
+    "how_to_apply": "将充值视为扩量预备信号，优先组合资金管理卡与新建计划卡，构建资金就位到立即基建的无缝操作流。",
+    "confidence": 0.78,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T19:02:46.581269",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH"
+    ],
+    "action_names": [
+      "manual_topup",
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_4789ca78",
+    "name": "菲站建资交替节奏",
+    "category": "PH",
+    "principle": "PH样本呈现创建与提预算高频交替特征，需顺应基建与注资的投放节奏。",
+    "when_to_apply": "站点为PH，短窗内连续触发create与budget_increase标签且置信>0.85。",
+    "how_to_apply": "按时间戳交替排序推荐卡片，避免同类动作堆叠，保障流量承接与资金释放同步。",
+    "confidence": 0.9,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T21:49:21.416518",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "ID",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_troi_decrease",
+      "smax_am_x_troi_decrease",
+      "smax_am_x_budget_unlimited",
+      "smax_am_x_budget_increase",
+      "smax_am_x_create"
+    ]
+  }
+]

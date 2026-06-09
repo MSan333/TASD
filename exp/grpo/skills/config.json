@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "analysis_model": "qwen-turbo",
+  "analysis_temperature": 0.2,
+  "analysis_max_tokens": 600,
+  "analysis_timeout": 30
+}

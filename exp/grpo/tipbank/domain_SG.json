@@ -1,0 +1,23 @@
+[
+  {
+    "skill_id": "skill_good_0721862c",
+    "name": "菲新市场意图泛化",
+    "category": "SG",
+    "principle": "PH绝对主导叠加SG单点验证，表明创建意图具区域同构性，需抹平本地规则差异统一路由。",
+    "when_to_apply": "SG站点触发smax_am_x_create预测且置信度≥0.8，或PH高优策略需向SG平移时。",
+    "how_to_apply": "直接复用PH高置信创建标准序列，避免因SG本地启发式规则碎片化导致意图降权或漏推。",
+    "confidence": 0.82,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-28T17:08:17.491185",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "SG"
+    ],
+    "action_names": [
+      "auto_topup_on",
+      "smax_am_x_create"
+    ]
+  }
+]

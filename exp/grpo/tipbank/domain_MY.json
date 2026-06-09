@@ -1,0 +1,68 @@
+[
+  {
+    "skill_id": "skill_good_982c40f6",
+    "name": "MY站降tROI宽配",
+    "category": "MY",
+    "principle": "MY案例降tROI成功依赖流量宽配与扩量承接，需针对性切换策略而非效率防守。",
+    "when_to_apply": "MY站点卖家手动下调tROI目标，或系统检测到保障门槛放宽信号时。",
+    "how_to_apply": "立即切换至扩量卡片池，过滤保底提效建议，同步放宽定向与出价匹配范围。",
+    "confidence": 0.6,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-05-27T15:18:03.134726",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "MY",
+      "SG",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_rapid_boost",
+      "smax_am_x_create",
+      "smax_aa_troi_decrease"
+    ]
+  },
+  {
+    "skill_id": "skill_good_c14fae46",
+    "name": "MY站创建泛化",
+    "category": "MY",
+    "principle": "MY样本占比高且置信稳定，验证创建意图在马来市场具普适性，需对齐PH/SG的高优路由逻辑。",
+    "when_to_apply": "站点为MY，模型输出smax_am_x_create且confidence≥0.8，静态特征稀疏或无明确决策点。",
+    "how_to_apply": "提升MY站创建推荐权重至PH同级，屏蔽本地保守规则拦截，直连新建计划工具链。",
+    "confidence": 0.88,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-04T22:58:28.010719",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "PH",
+      "SG",
+      "MY"
+    ],
+    "action_names": [
+      "smax_am_x_create"
+    ]
+  },
+  {
+    "skill_id": "skill_good_5b7e1db1",
+    "name": "MY站创建置信锚定",
+    "category": "MY",
+    "principle": "MY样本create置信度高度集中于0.85-0.9且零上下文干扰，确立为该站扩量基准信号，需提权至首位。",
+    "when_to_apply": "站点为MY，模型输出smax_am_x_create且confidence≥0.85，无明确收缩行为或资金熔断信号。",
+    "how_to_apply": "启用站点专属免检通道，压制充值与存量调优卡，强制路由至矩阵搭建与速爆工具链。",
+    "confidence": 0.89,
+    "effectiveness_score": 0.0,
+    "created_at": "2026-06-05T16:18:21.970001",
+    "last_validated": null,
+    "case_type": "good",
+    "ventures": [
+      "SG",
+      "MY",
+      "PH"
+    ],
+    "action_names": [
+      "smax_am_x_troi_decrease",
+      "smax_am_x_create"
+    ]
+  }
+]
