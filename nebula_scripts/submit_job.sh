@@ -28,7 +28,7 @@ OSS_ACCESS_KEY="${OSS_ACCESS_KEY:?OSS_ACCESS_KEY not set}"
 OSS_ENDPOINT="oss-cn-hangzhou-zmf.aliyuncs.com"
 OSS_BUCKET="lazada-ai-model"
 # 自定义镜像（留空则使用 --algo_name=pytorch260 默认镜像）
-CUSTOM_DOCKER_IMAGE="${CUSTOM_DOCKER_IMAGE:-hub.docker.alibaba-inc.com/mdl/notebook_saved:guoshuaile.gsl_llm_rl_20260605230018}"
+CUSTOM_DOCKER_IMAGE="${CUSTOM_DOCKER_IMAGE:-hub.docker.alibaba-inc.com/mdl/notebook_saved:guoshuaile.gsl_33v2_20260609193943}"
 
 # ── 训练脚本路径 ───────────────────────────────────────────────────────────
 script_dir_path="${1:-nebula_scripts/tasd/tasd_sciknoweval_qwen3_8B.sh}"
