@@ -62,20 +62,21 @@ export MODEL_PATH="/data/oss_bucket_0/ad/guoshauile.gsl/model/qwen3-8b"
 
 # ── LLM Judge (DashScope) ─────────────────────────────────────────────
 # Reward 函数中的 Knowledge-Grounded Judge 使用 DashScope API 打分。
-# 如果 API Key 失效, 请到 https://dashscope.console.aliyun.com 重新获取。
-export OPENAI_API_KEY="${OPENAI_API_KEY:-sk-93bf8a433943448bad6611ca5532a113}"
+# ★ 请设置环境变量（到 https://dashscope.console.aliyun.com 获取）★
+# export OPENAI_API_KEY="你的dashscope_api_key"
+export OPENAI_API_KEY="${OPENAI_API_KEY:-}"
 export OPENAI_BASE_URL="${OPENAI_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}"
 export OPENAI_MODEL="${OPENAI_MODEL:-qwen3.6-max-preview}"
 
 # ── SwanLab 日志追踪 ──────────────────────────────────────────────────
 # SwanLab Cloud 模式: 训练指标自动上传到 https://swanlab.cn
-# 如果 API Key 失效, 请到 https://swanlab.cn/settings 重新获取。
-export SWANLAB_API_KEY="${SWANLAB_API_KEY:-o4MGQAOSX8rGztH69Jj5P}"
+# API Key 可直接明文，无安全风险。如需更换到 https://swanlab.cn/settings 获取。
+export SWANLAB_API_KEY="o4MGQAOSX8rGztH69Jj5P"
 export SWANLAB_MODE="cloud"
 
 # ── 实验名称 ───────────────────────────────────────────────────────────
 export PROJECT_NAME="GRPO-Ranking"
-export JOB_NAME="grpo_ranking_$(date +%Y%m%d_%H%M%S)"
+export JOB_NAME="${JOB_NAME:-grpo_ranking_$(date +%Y%m%d_%H%M%S)}"
 
 echo "✅ GRPO Ranking 环境变量已加载"
 echo "   DATASET=${DATASET}, LR=${LR}, BATCH=${TRAIN_BATCH_SIZE}, ROLLOUT_N=${ROLLOUT_N}"

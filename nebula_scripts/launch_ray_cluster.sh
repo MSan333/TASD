@@ -27,13 +27,19 @@ echo "JOB_NAME    = $JOB_NAME"
 # ── 激活自定义 conda 环境（若存在）───────────────────────────────
 # 必须在 Ray start 之前激活，让 Ray worker 继承正确的 Python 环境
 # 直接 export PATH 而非 conda activate，避免非交互式 shell 下 conda hook 未初始化问题
-CONDA_ENV_NAME="sdpo_env"
+CONDA_ENV_NAME="${CONDA_ENV_NAME:-python3.10.13}"
 CONDA_ENV_BIN="/opt/conda/envs/${CONDA_ENV_NAME}/bin"
 if [ -d "${CONDA_ENV_BIN}" ]; then
     export PATH="${CONDA_ENV_BIN}:${PATH}"
     echo "Activated conda env: ${CONDA_ENV_NAME} (${CONDA_ENV_BIN})"
+elif [ -d "/opt/conda/envs/python3.10/bin" ]; then
+    export PATH="/opt/conda/envs/python3.10/bin:${PATH}"
+    echo "Activated conda env: python3.10 (fallback)"
+elif [ -d "/opt/conda/envs/sdpo_env/bin" ]; then
+    export PATH="/opt/conda/envs/sdpo_env/bin:${PATH}"
+    echo "Activated conda env: sdpo_env (fallback)"
 else
-    echo "[WARN] conda env '${CONDA_ENV_NAME}' not found at ${CONDA_ENV_BIN}, using system Python"
+    echo "[WARN] No conda env found (tried ${CONDA_ENV_NAME}, python3.10, sdpo_env), using system Python"
 fi
 
 # ── 在 ray start 之前设置环境变量 ──
@@ -68,7 +74,7 @@ export VLLM_LOGGING_LEVEL=WARN
 export TORCH_WARN_ACCUMULATE_GRAD_STREAM=0
 
 # 5. SwanLab 配置（fallback 到硬编码 key，确保 Ray worker 进程继承）
-export SWANLAB_API_KEY="${SWANLAB_API_KEY:-M5oC00EEt8G1wC0XaHkal}"
+export SWANLAB_API_KEY="${SWANLAB_API_KEY:-o4MGQAOSX8rGztH69Jj5P}"
 
 echo "PYTHONPATH = $PYTHONPATH"
 

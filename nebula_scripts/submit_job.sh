@@ -19,12 +19,20 @@
 #       lazada_llm_ad_h20
 # =============================================================================
 
-# ── Nebula 账号配置 ────────────────────────────────────────────────────────
-QUEUE="lazada_llm_ad_h20"         # 默认队列（H20），可改为 ae_h100
-WORLD_SIZE="${2:-1}"                     # 节点数，单节点填 1
-OPENLM_TOKEN="${OPENLM_TOKEN:?OPENLM_TOKEN not set}"
-OSS_ACCESS_ID="${OSS_ACCESS_ID:?OSS_ACCESS_ID not set}"
-OSS_ACCESS_KEY="${OSS_ACCESS_KEY:?OSS_ACCESS_KEY not set}"
+# ── Nebula 账号配置（从环境变量读取）────────────────────────────────────
+# ★ 提交前必须设置以下环境变量 ★
+# 建议写入 ~/.bashrc 避免每次手动设置：
+#
+#   export OPENLM_TOKEN="你的openlm_token"
+#   export OSS_ACCESS_ID="你的oss_access_id"
+#   export OSS_ACCESS_KEY="你的oss_access_key"
+#
+QUEUE="${3:-lazada_llm_ad_h20}"     # 默认队列（H20），可改为 ae_h100
+WORLD_SIZE="${2:-1}"                # 节点数，单节点填 1
+OPENLM_TOKEN="${OPENLM_TOKEN:?请先设置: export OPENLM_TOKEN=\"你的openlm_token\"}"
+OSS_ACCESS_ID="${OSS_ACCESS_ID:?请先设置: export OSS_ACCESS_ID=\"你的oss_access_id\"}"
+OSS_ACCESS_KEY="${OSS_ACCESS_KEY:?请先设置: export OSS_ACCESS_KEY=\"你的oss_access_key\"}"
+export OPENLM_TOKEN OSS_ACCESS_ID OSS_ACCESS_KEY
 OSS_ENDPOINT="oss-cn-hangzhou-zmf.aliyuncs.com"
 OSS_BUCKET="lazada-ai-model"
 # 自定义镜像（留空则使用 --algo_name=pytorch260 默认镜像）
@@ -59,6 +67,22 @@ echo "  Cluster    : $CLUSTER_FILE"
 [ -n "$CUSTOM_DOCKER_IMAGE" ] && echo "  镜像       : $CUSTOM_DOCKER_IMAGE"
 echo "============================================================"
 
+# ── 构建 --env 参数：将本地环境变量传递到远程 Nebula 环境 ─────────────
+# 训练超参（来自 env.sh）
+ENV_FLAGS=""
+for var in DATASET LR MINI_BATCH_SIZE TRAIN_BATCH_SIZE ROLLOUT_N \
+           MODEL_PATH KL_COEF TOTAL_TRAINING_STEPS VAL_N \
+           PROJECT_NAME \
+           OPENAI_API_KEY OPENAI_BASE_URL OPENAI_MODEL \
+           SWANLAB_API_KEY SWANLAB_MODE; do
+    val="${!var}"
+    if [ -n "$val" ]; then
+        ENV_FLAGS="${ENV_FLAGS} --env=${var}=${val}"
+    fi
+done
+# 始终传递 OPENLM_TOKEN
+ENV_FLAGS="${ENV_FLAGS} --env=OPENLM_TOKEN=${OPENLM_TOKEN}"
+
 SUBMIT_OUTPUT=$(nebulactl run mdl \
     --force \
     --engine=xdl \
@@ -70,7 +94,7 @@ SUBMIT_OUTPUT=$(nebulactl run mdl \
     --job_name=${JOB_NAME} \
     --access_id=${OSS_ACCESS_ID} \
     --access_key=${OSS_ACCESS_KEY} \
-    --env=OPENLM_TOKEN=${OPENLM_TOKEN} \
+    ${ENV_FLAGS} \
     $([ -n "$CUSTOM_DOCKER_IMAGE" ] && echo "--custom_docker_image=${CUSTOM_DOCKER_IMAGE}" || echo "--algo_name=pytorch260") \
     --requirements_file_name=requirements_nebula.txt \
     --oss_access_id=${OSS_ACCESS_ID} \

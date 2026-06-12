@@ -1,8 +1,11 @@
 # SDPO Nebula 运行环境依赖（精简版）
-# 
+#
 # 原则：pytorch260 镜像已预装大部分库，只安装镜像中没有的或 SDPO 特有的
 # 已预装：torch, vllm, flash-attn, transformers, accelerate, datasets,
 #         ray, pandas, numpy, pyarrow, wandb 等
+
+# ── 锁定 numpy 版本（sklearn/pyarrow 用 1.x 编译，numpy 2.x 会崩溃）──
+numpy<2
 
 # ── SDPO 特有依赖（镜像中可能没有）────────────────────────────────────────────
 vllm>=0.9.0
