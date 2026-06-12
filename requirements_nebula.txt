@@ -1,10 +1,16 @@
-# SDPO Nebula 运行环境依赖（精简版）
+# TASD Nebula 运行环境依赖（精简版）
 # 
-# 原则：pytorch260 镜像已预装大部分库，只安装镜像中没有的或 SDPO 特有的
+# 原则：自定义镜像已预装大部分库，只安装镜像中没有的或 TASD 特有的
 # 已预装：torch, vllm, flash-attn, transformers, accelerate, datasets,
 #         ray, pandas, numpy, pyarrow, wandb 等
 
-# ── SDPO 特有依赖（镜像中可能没有）────────────────────────────────────────────
+# ── 兼容性修复 ────────────────────────────────────────────────────────────────
+# huggingface_hub >= 0.24 对 from_pretrained 的本地路径做 repo_id 校验，
+# 会拒绝绝对路径（如 /data/oss_bucket_0/.../model/qwen3-8b），导致加载失败。
+# 锁定到兼容版本以防万一（代码层面已修复，但双保险）。
+huggingface_hub<0.28
+
+# ── TASD 特有依赖（镜像中可能没有）────────────────────────────────────────────
 vllm>=0.9.0
 swanlab                     # 日志（替代 ml_tracker）
 openlm-hub                  # 模型加载
@@ -18,6 +24,7 @@ pybind11                    # C++ 绑定
 pylatexenc                  # LaTeX 编码
 torchdata                   # 数据加载
 peft                        # LoRA/PEFT 训练
+filelock                    # 文件锁（copy_to_local 需要）
 
 # ── 奖励评估（sciknoweval 数学验证需要）───────────────────────────────────────
 math-verify[antlr4_9_3]

@@ -48,6 +48,8 @@ def hf_tokenizer(name_or_path, correct_pad_token=True, correct_gemma2=True, **kw
         transformers.PreTrainedTokenizer: The pretrained tokenizer.
 
     """
+    import os
+
     from transformers import AutoTokenizer
 
     if correct_gemma2 and isinstance(name_or_path, str) and "gemma-2-2b-it" in name_or_path:
@@ -58,6 +60,13 @@ def hf_tokenizer(name_or_path, correct_pad_token=True, correct_gemma2=True, **kw
         )
         kwargs["eos_token"] = "<end_of_turn>"
         kwargs["eos_token_id"] = 107
+
+    # When name_or_path is a local directory, force local_files_only=True to bypass
+    # huggingface_hub's validate_repo_id() which rejects absolute paths (e.g., /data/...).
+    # This is needed for huggingface_hub >= 0.24 compatibility.
+    if isinstance(name_or_path, str) and os.path.isdir(name_or_path):
+        kwargs.setdefault("local_files_only", True)
+
     tokenizer = AutoTokenizer.from_pretrained(name_or_path, **kwargs)
     if correct_pad_token:
         set_pad_token_id(tokenizer)
@@ -73,7 +82,13 @@ def hf_processor(name_or_path, **kwargs):
     Returns:
         transformers.ProcessorMixin: The pretrained processor.
     """
+    import os
+
     from transformers import AutoConfig, AutoProcessor
+
+    # Force local_files_only for local paths to bypass huggingface_hub repo_id validation
+    if isinstance(name_or_path, str) and os.path.isdir(name_or_path):
+        kwargs.setdefault("local_files_only", True)
 
     try:
         processor = AutoProcessor.from_pretrained(name_or_path, **kwargs)

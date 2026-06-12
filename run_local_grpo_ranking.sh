@@ -28,15 +28,24 @@ set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${PROJECT_ROOT}"
 
-# ── 使用 conda python3.10 环境 ─────────────────────────────────────────
-CONDA_PYTHON="/opt/conda/envs/python3.10/bin/python"
-if [ -x "${CONDA_PYTHON}" ]; then
-    export PATH="/opt/conda/envs/python3.10/bin:${PATH}"
+# ── 激活 conda 环境（优先 python3.10.13，其次 python3.10）─────────────
+CONDA_ACTIVATED=false
+for ENV_NAME in python3.10.13 python3.10; do
+    ENV_BIN="/opt/conda/envs/${ENV_NAME}/bin"
+    if [ -d "${ENV_BIN}" ]; then
+        export PATH="${ENV_BIN}:${PATH}"
+        echo "使用 conda 环境: ${ENV_NAME}"
+        CONDA_ACTIVATED=true
+        break
+    fi
+done
+if [ "${CONDA_ACTIVATED}" = false ]; then
+    echo "[WARN] 未找到 conda 环境，使用系统 Python"
 fi
 # 验证关键依赖
 python -c "import torch, ray, vllm, swanlab" 2>/dev/null || {
     echo "❌ 缺少关键依赖 (torch/ray/vllm/swanlab)"
-    echo "   请确保 conda python3.10 环境已安装: conda activate python3.10"
+    echo "   请确保 conda 环境已安装: conda activate python3.10.13"
     exit 1
 }
 
@@ -114,7 +123,7 @@ export WANDB_MODE=offline
 
 # SwanLab 配置 — cloud 模式
 export SWANLAB_MODE=cloud
-export SWANLAB_API_KEY="${SWANLAB_API_KEY:-o4MGQAOSX8rGztH69Jj5P}"
+export SWANLAB_API_KEY="${SWANLAB_API_KEY:-3sKfdi20C8rYk5JQs0fOJ}"
 export SWANLAB_LOG_DIR="${save_path}/swanlab_logs"
 
 # 其他

@@ -2,6 +2,9 @@
 # =============================================================================
 # GRPO Ranking 训练脚本 — guoshauile.gsl OSS 路径
 #
+# 自包含版本：所有超参都有默认值，可直接运行。
+# 也可通过环境变量覆盖（如在 submit_job.sh 中通过 --env 传入）。
+#
 # OSS 目录结构:
 #   oss://lazada-ai-model/ad/guoshauile.gsl/
 #     ├── data/          训练/测试数据
@@ -13,13 +16,13 @@ set +xo pipefail
 
 OSS_ROOT="/data/oss_bucket_0/ad/guoshauile.gsl"
 
-# ── 从环境变量读取超参 ────────────────────────────────────────────────
-: "${DATASET:?DATASET is not set}"
-: "${LR:?LR is not set}"
-: "${MINI_BATCH_SIZE:?MINI_BATCH_SIZE is not set}"
-: "${TRAIN_BATCH_SIZE:?TRAIN_BATCH_SIZE is not set}"
-: "${ROLLOUT_N:?ROLLOUT_N is not set}"
-: "${MODEL_PATH:?MODEL_PATH is not set}"
+# ── 超参配置（均有默认值，可通过环境变量覆盖）─────────────────────────
+DATASET="${DATASET:-ranking}"
+LR="${LR:-1e-5}"
+MINI_BATCH_SIZE="${MINI_BATCH_SIZE:-8}"
+TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-32}"
+ROLLOUT_N="${ROLLOUT_N:-8}"
+MODEL_PATH="${MODEL_PATH:-${OSS_ROOT}/model/qwen3-8b}"
 KL_COEF="${KL_COEF:-0.05}"
 TOTAL_TRAINING_STEPS="${TOTAL_TRAINING_STEPS:-500}"
 N_GPUS="${N_GPUS:-4}"
@@ -46,7 +49,7 @@ export RAY_memory_monitor_refresh_ms=0
 export WANDB_MODE=offline
 export WANDB_ENTITY=oh-my-team
 export SWANLAB_MODE=cloud
-export SWANLAB_API_KEY="${SWANLAB_API_KEY:-o4MGQAOSX8rGztH69Jj5P}"
+export SWANLAB_API_KEY="${SWANLAB_API_KEY:-3sKfdi20C8rYk5JQs0fOJ}"
 export SWANLAB_LOG_DIR="${OSS_ROOT}/log/swanlab_logs"
 export TORCH_WARN_ACCUMULATE_GRAD_STREAM=0
 
