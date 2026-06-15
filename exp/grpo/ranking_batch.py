@@ -75,7 +75,10 @@ def _batch_no_llm(
         result = compute_reward(solution_strs[i], gt, extra_infos[i])
         results.append({
             "score": result["score"],
-            "judge_score": 0.0,  # No LLM judge in fallback mode
+            "judge_score": 0.0,
+            "rule_score": result.get("rule_score", 0.0),
+            "rule_neg_position": result.get("rule_neg_position", 0.0),
+            "rule_pos_position": result.get("rule_pos_position", 0.0),
             "format_valid": result.get("format_valid", False),
             "format_penalty": result.get("format_penalty", 0.0),
             "has_markdown": result.get("has_markdown", False),
@@ -98,8 +101,10 @@ def _batch_with_llm(
 
     v4: Uses format_check (instead of format_gate) to get format diagnostics
     and apply format_penalty on top of judge score.
+    v5: Adds rule-based score (50% rule + 50% judge + format_penalty).
     """
     from .llm_judge import batch_knowledge_judge
+    from .reward_fn import _rule_based_score
 
     batch_size = len(solution_strs)
     parsed_gts = []
@@ -144,15 +149,29 @@ def _batch_with_llm(
             logger.warning("Batch Knowledge Judge failed: %s", e)
             llm_results = [{"score": 0.0}] * len(llm_indices)
 
-    # Assemble final results as dicts with format penalty applied
+    # Assemble final results as dicts with format penalty + rule score applied
     final_results: List[dict] = []
     llm_idx = 0
     for i in range(batch_size):
         fc = format_results[i]
+        gt = parsed_gts[i]
+
+        # Compute rule-based score for all samples
+        rule_result = _rule_based_score(
+            fc["rank_list"] if fc["valid"] else [],
+            gt.get("positive_keys", []),
+            gt.get("negative_keys", []),
+            gt.get("context", {}),
+        )
+        rule_score = rule_result["score"]
+
         if not fc["valid"]:
             final_results.append({
                 "score": FORMAT_PENALTY,
-                "judge_score": 0.0,  # No judge for invalid format
+                "judge_score": 0.0,
+                "rule_score": rule_score,
+                "rule_neg_position": rule_result.get("neg_avg_position", 0.0),
+                "rule_pos_position": rule_result.get("pos_avg_position", 0.0),
                 "format_valid": False,
                 "format_penalty": 0.0,
                 "has_markdown": False,
@@ -168,10 +187,14 @@ def _batch_with_llm(
             if llm_idx < len(llm_results):
                 r = llm_results[llm_idx]
                 judge_score = r.get("score", 0.0)
-                final_score = judge_score + format_penalty
+                # Hybrid: 50% rule + 50% judge + format_penalty
+                final_score = 0.5 * rule_score + 0.5 * judge_score + format_penalty
                 final_results.append({
                     "score": round(final_score, 4),
                     "judge_score": round(judge_score, 4),
+                    "rule_score": round(rule_score, 4),
+                    "rule_neg_position": rule_result.get("neg_avg_position", 0.0),
+                    "rule_pos_position": rule_result.get("pos_avg_position", 0.0),
                     "format_valid": True,
                     "format_penalty": format_penalty,
                     "has_markdown": fc["has_markdown"],
@@ -184,9 +207,14 @@ def _batch_with_llm(
                 })
             else:
                 # Fallback when LLM judge failed or returned fewer results
+                # Use 100% rule_score when judge unavailable
+                fallback_score = rule_score + format_penalty
                 final_results.append({
-                    "score": round(format_penalty, 4),
+                    "score": round(fallback_score, 4),
                     "judge_score": 0.0,
+                    "rule_score": round(rule_score, 4),
+                    "rule_neg_position": rule_result.get("neg_avg_position", 0.0),
+                    "rule_pos_position": rule_result.get("pos_avg_position", 0.0),
                     "format_valid": True,
                     "format_penalty": format_penalty,
                     "has_markdown": fc["has_markdown"],

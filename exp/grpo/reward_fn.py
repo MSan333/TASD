@@ -212,6 +212,108 @@ def format_check(raw: str, card_pool: List[str]) -> Dict[str, Any]:
 
 
 # ============================================================================
+# L1b: Rule-based Score — 确定性规则评分
+# ============================================================================
+
+def _rule_based_score(
+    rank_list: List[str],
+    positive_keys: List[str],
+    negative_keys: List[str],
+    ctx: Dict[str, Any],
+) -> Dict[str, Any]:
+    """基于确定性规则的排序质量评分，不依赖 LLM.
+
+    评分维度:
+      1. negative_keys 位置: 应在排序底部 (权重 50%)
+      2. positive_keys 位置: 应在排序顶部 (权重 30%, 仅当 positive_keys 非空)
+      3. 上下文规则: 非大促期 MSA 卡片应排后 (权重 20%)
+
+    Returns:
+        {"score": float[-1,1], "neg_avg_position": float, "pos_avg_position": float, ...}
+    """
+    n = len(rank_list)
+    if n == 0:
+        return {"score": 0.0, "neg_avg_position": 0.0, "pos_avg_position": 0.0}
+
+    score = 0.0
+
+    # ── 1. Negative keys should be at the bottom ──
+    neg_positions = []
+    neg_score = 0.0
+    if negative_keys:
+        for key in negative_keys:
+            if key in rank_list:
+                pos = rank_list.index(key)
+                neg_positions.append(pos)
+                # pos=0 (top) → penalty; pos=n-1 (bottom) → reward
+                # Normalize to [-1, 1]: (n-1-pos)/(n-1) * 2 - 1
+                # pos at bottom (n-1) → +1, pos at top (0) → -1
+                norm = (n - 1 - pos) / max(n - 1, 1) * 2 - 1
+                neg_score += norm
+        neg_score /= len(negative_keys)
+        neg_avg_pos = sum(neg_positions) / len(neg_positions) if neg_positions else -1
+    else:
+        neg_avg_pos = -1  # 无 negative keys
+
+    # ── 2. Positive keys should be at the top ──
+    pos_positions = []
+    pos_score = 0.0
+    if positive_keys:
+        for key in positive_keys:
+            if key in rank_list:
+                pos = rank_list.index(key)
+                pos_positions.append(pos)
+                # pos=0 (top) → reward; pos=n-1 (bottom) → penalty
+                norm = (n - 1 - pos) / max(n - 1, 1) * 2 - 1
+                pos_score += norm
+        pos_score /= len(positive_keys)
+        pos_avg_pos = sum(pos_positions) / len(pos_positions) if pos_positions else -1
+    else:
+        pos_score = 0.0  # 无 positive keys，不计分
+        pos_avg_pos = -1
+
+    # ── 3. Context rules ──
+    ctx_score = 0.0
+    is_mega = ctx.get("is_mega_period", False)
+    if not is_mega:
+        # 非大促期，MSA 相关卡片应排后
+        msa_keywords = ["msa", "mega", "sd_msa"]
+        msa_positions = []
+        for i, key in enumerate(rank_list):
+            for kw in msa_keywords:
+                if kw in key.lower():
+                    msa_positions.append(i)
+                    break
+        if msa_positions:
+            for pos in msa_positions:
+                norm = (n - 1 - pos) / max(n - 1, 1) * 2 - 1
+                # MSA 在非大促期排后 → reward (norm 接近 +1 表示在底部)
+                ctx_score += norm
+            ctx_score /= len(msa_positions)
+        else:
+            ctx_score = 0.0  # 无 MSA 卡片
+
+    # ── 加权求和 ──
+    if positive_keys:
+        # 有 positive_keys: 50% neg + 30% pos + 20% ctx
+        score = 0.5 * neg_score + 0.3 * pos_score + 0.2 * ctx_score
+    else:
+        # 无 positive_keys: 60% neg + 40% ctx (重新分配权重)
+        score = 0.6 * neg_score + 0.4 * ctx_score
+
+    score = max(-1.0, min(1.0, score))
+
+    return {
+        "score": round(score, 4),
+        "neg_avg_position": round(neg_avg_pos, 2),
+        "pos_avg_position": round(pos_avg_pos, 2),
+        "neg_score": round(neg_score, 4),
+        "pos_score": round(pos_score, 4),
+        "ctx_score": round(ctx_score, 4),
+    }
+
+
+# ============================================================================
 # Main Entry: compute_reward
 # ============================================================================
 
@@ -270,6 +372,10 @@ def compute_reward(
             parts.append(f"missing={n_missing}")
         logger.debug("[FormatPenalty] %s → %.2f", ", ".join(parts), format_penalty)
 
+    # L1b: Rule-based Score (确定性规则评分，不依赖 LLM)
+    rule_result = _rule_based_score(rank_list, positive_keys, negative_keys, ctx)
+    rule_score = rule_result["score"]
+
     # L2: Knowledge-Grounded Judge
     client = _get_llm_client()
     if not client:
@@ -303,7 +409,10 @@ def compute_reward(
     )
 
     judge_score = judge_result.get("score", 0.0)
-    final_score = judge_score + format_penalty
+
+    # 混合评分: 50% 规则分 + 50% judge 分 + 格式惩罚
+    # 规则分提供稳定信号，judge 分提供深度评估
+    final_score = 0.5 * rule_score + 0.5 * judge_score + format_penalty
 
     return {
         "score": round(final_score, 4),
@@ -312,6 +421,9 @@ def compute_reward(
         "has_markdown": has_markdown,
         "n_hallucinated": n_hallucinated,
         "n_missing": n_missing,
+        "rule_score": round(rule_score, 4),
+        "rule_neg_position": rule_result.get("neg_avg_position", 0.0),
+        "rule_pos_position": rule_result.get("pos_avg_position", 0.0),
         "intent_alignment": judge_result.get("intent_alignment", 0.0),
         "strategy_compliance": judge_result.get("strategy_compliance", 0.0),
         "result_prediction": judge_result.get("result_prediction", 0.0),
