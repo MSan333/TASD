@@ -17,6 +17,23 @@
 
 ---
 
+## 密钥准备
+
+提交脚本中 `SWANLAB_API_KEY` 已明文写入（无安全风险），以下 3 个敏感密钥需要通过环境变量传入。使用前请在本地设置（建议写入 `~/.bashrc`）：
+
+```bash
+# OpenLM Token（用于模型加载）
+export OPENLM_TOKEN="your_openlm_token"
+
+# OSS 访问凭证（用于数据/模型/结果存储）
+export OSS_ACCESS_ID="your_oss_access_id"
+export OSS_ACCESS_KEY="your_oss_access_key"
+```
+
+> ⚠️ **注意**：这 3 个密钥不要提交到 git 仓库中。如果 `submit_nebula_uv.sh` 需要提交到 git，请确保其中不包含这些敏感信息（当前脚本已从环境变量读取）。
+
+---
+
 ## 星云提交流程
 
 ### 1. 前置条件
@@ -25,26 +42,27 @@
 - `nebulactl` CLI 已安装
 - git 已配置，能 push 到远端
 - 代码已 commit 并 push 到 `origin`
+- 上述密钥环境变量已设置
 
-**星云环境**（自动）：
-- Docker 镜像：`hub.docker.alibaba-inc.com/mdl/notebook_saved:guoshuaile.gsl_33v2_20260609193943`
-- 预装：torch 2.7.1, vllm 0.9.0, ray, transformers 等
-- 训练脚本会额外 `pip install` 锁定版本的依赖
+**星云环境**：
+
+| 方式 | 镜像 | 说明 |
+|------|------|------|
+| 方式 A（默认） | `hub.docker.alibaba-inc.com/mdl/notebook_saved:guoshuaile.gsl_33v2_20260609193943` | 预装 torch/vllm/ray，训练时 pip install 依赖 |
+| 方式 B（自定义） | **需自行构建并推送** | 预装 uv + 项目依赖，训练时直接激活环境 |
+
+**方式 B 自定义镜像配置**：
+- 在 `submit_nebula_uv.sh` 中通过 `CUSTOM_DOCKER_IMAGE` 环境变量指定镜像名称
+- 镜像需基于星云 notebook_saved 镜像，预装 uv 和项目依赖
+- 构建推送后，将完整镜像 tag 填入提交命令即可
 
 ### 2. 提交任务
+
+#### 方式 A：使用默认镜像 + pip 安装依赖
 
 ```bash
 cd /path/to/TASD
 
-# 方式一：通过 submit_nebula.sh（推荐）
-bash exp/grpo/start/submit_nebula.sh
-
-# 方式二：通过根目录的 submit_grpo.sh
-bash submit_grpo.sh
-```
-
-**提交参数**：
-```bash
 # 默认：单节点 4 卡，500 steps
 bash exp/grpo/start/submit_nebula.sh
 
@@ -53,10 +71,34 @@ bash exp/grpo/start/submit_nebula.sh LR=5e-6 TOTAL_TRAINING_STEPS=200
 
 # 多节点（2 节点 × 4 卡 = 8 卡）
 WORLD_SIZE=2 bash exp/grpo/start/submit_nebula.sh
-
-# 修改 batch size
-bash exp/grpo/start/submit_nebula.sh TRAIN_BATCH_SIZE=64 MINI_BATCH_SIZE=4
 ```
+
+#### 方式 B：使用自定义镜像 + uv 环境（推荐）
+
+适用于已将本地环境打包为 Docker 镜像的场景。镜像中需预装 uv 和项目依赖，训练时直接激活环境运行，无需每次 `pip install`。
+
+```bash
+cd /path/to/TASD
+
+# 提交（必须指定 CUSTOM_DOCKER_IMAGE）
+CUSTOM_DOCKER_IMAGE=<your_image_tag> bash exp/grpo/b/submit_nebula_uv.sh
+
+# 覆盖超参
+CUSTOM_DOCKER_IMAGE=<your_image_tag> bash exp/grpo/b/submit_nebula_uv.sh LR=5e-6 TOTAL_TRAINING_STEPS=200
+
+# 多节点
+CUSTOM_DOCKER_IMAGE=<your_image_tag> WORLD_SIZE=2 bash exp/grpo/b/submit_nebula_uv.sh
+```
+
+**自定义镜像要求**：
+- 基于星云 notebook_saved 镜像（已有 conda python3.10.13 + torch + vllm + ray）
+- 安装了 **uv**
+- 项目依赖已通过 `uv pip install --system -e .` 预装（或镜像中有 `.venv`）
+
+**对应的训练脚本**：`exp/grpo/b/grpo_ranking_gsl_v7_uv.sh`
+- 使用 uv 激活环境（优先 `.venv`，回退到系统 Python）
+- 去掉了 `pip install` 步骤（镜像中已预装）
+- 超参：`TRAIN_BATCH_SIZE=8, ROLLOUT_N=8, MINI_BATCH_SIZE=4`
 
 ### 3. 查看日志
 
@@ -116,20 +158,24 @@ bash exp/grpo/start/train_local.sh
 ## 文件结构
 
 ```
+exp/grpo/b/                     # ★ uv 环境版所有文件集中在此目录 ★
+├── NEBULA_TRAINING.md          # 本文件（训练指南）
+├── QUICK_REFERENCE.md          # 快速参考
+├── grpo_ranking_gsl_v7_uv.sh   # 星云训练脚本（uv 环境版）
+└── submit_nebula_uv.sh         # 星云提交脚本（无密钥，从环境变量读取）
+
 exp/grpo/
 ├── start/
 │   ├── train_local.sh          # 本地单卡训练脚本
-│   ├── submit_nebula.sh        # 星云提交脚本（含密钥，已 gitignore）
+│   ├── submit_nebula.sh        # 星云提交脚本（默认镜像版，含密钥，已 gitignore）
 │   └── setup.sh                # 本地环境安装脚本
-├── b/
-│   └── NEBULA_TRAINING.md      # 本文件
 ├── reward_fn.py                # v7 reward 实现（单条路径）
 ├── ranking_batch.py            # v7 reward 实现（batch 路径，训练实际走）
 └── data/
     └── ranking/                # 本地数据（已 gitignore）
 
 nebula_scripts/grpo/
-└── grpo_ranking_gsl_v4.sh      # 星云训练脚本（v7 改动已同步）
+└── grpo_ranking_gsl_v4.sh      # 星云训练脚本（默认镜像 + pip 版）
 ```
 
 ---

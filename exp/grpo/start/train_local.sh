@@ -69,14 +69,14 @@ export CUDA_VISIBLE_DEVICES
 #
 DATASET="${DATASET:-ranking}"
 LR="${LR:-1e-5}"
-KL_LOSS_COEF="${KL_LOSS_COEF:-0.01}"
-ENTROPY_COEFF="${ENTROPY_COEFF:-0.005}"
+KL_LOSS_COEF="${KL_LOSS_COEF:-0.003}"
+ENTROPY_COEFF="${ENTROPY_COEFF:-0.02}"
 TOTAL_TRAINING_STEPS="${TOTAL_TRAINING_STEPS:-500}"
 
-# 单卡配置（显存 ~24GB 时推荐值）
-MINI_BATCH_SIZE="${MINI_BATCH_SIZE:-2}"
+# 单卡 H20 144GB 配置
+MINI_BATCH_SIZE="${MINI_BATCH_SIZE:-4}"
 TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-8}"
-ROLLOUT_N="${ROLLOUT_N:-4}"
+ROLLOUT_N="${ROLLOUT_N:-8}"
 VAL_N="${VAL_N:-4}"
 GPU_MEM_UTIL="${GPU_MEM_UTIL:-0.5}"
 
@@ -85,9 +85,9 @@ MAX_PROMPT_LENGTH="${MAX_PROMPT_LENGTH:-4096}"
 MAX_RESPONSE_LENGTH="${MAX_RESPONSE_LENGTH:-2048}"
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-8192}"
 
-# 生成参数（与 v4 一致）
+# 生成参数（提高 top_p 增加多样性，解决 entropy 过低问题）
 TEMPERATURE="${TEMPERATURE:-1.0}"
-TOP_P="${TOP_P:-0.7}"
+TOP_P="${TOP_P:-0.9}"
 TOP_K="${TOP_K:--1}"
 
 # 模型路径
@@ -183,6 +183,7 @@ python -m verl.trainer.main_ppo \
     data.train_batch_size=${TRAIN_BATCH_SIZE} \
     data.train_files="${train_data_path}" \
     data.val_files="${val_data_path}" \
+    data.val_max_samples=100 \
     data.max_prompt_length=${MAX_PROMPT_LENGTH} \
     data.max_response_length=${MAX_RESPONSE_LENGTH} \
     max_model_len=${MAX_MODEL_LEN} \
@@ -212,6 +213,7 @@ python -m verl.trainer.main_ppo \
     trainer.total_epochs=30 \
     trainer.total_training_steps=${TOTAL_TRAINING_STEPS} \
     trainer.save_freq=10 \
+    trainer.test_freq=10 \
     trainer.save_best_metric=val/test_score/mean \
     trainer.n_gpus_per_node=${N_GPUS} \
     trainer.val_before_train=False \
