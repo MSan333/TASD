@@ -1,21 +1,18 @@
 #!/usr/bin/env bash
 # =============================================================================
-# GRPO Ranking v5 训练脚本 — 统一公式版
+# GRPO Ranking v7 训练脚本 — DAPO Filter + Top-3 Precision
 #
-# 奖励函数（统一公式）:
-#   final_score = α × rule_score + (1-α) × judge_score + format_penalty
+# v7 修复 (基于 DAPO/DeepSeek-R1/PRM 等论文 + v4 训练诊断):
+#   1. use_kl_loss=True: v4 的 use_kl_loss=False 导致 KL 正则化完全未开启
+#   2. norm_adv_by_std_in_grpo=True: GRPO 标准做法
+#   3. 去掉 rollout_is: 策略漂移后 IS ratio 1.0→0.2
+#   4. reward: DAPO filter — 格式无效 score=0 (非加法惩罚)
+#   5. reward: Top-3 Precision — 只看前 3 位置, 归一化 [0,1]
+#   6. reward: 0.7 × top3 + 0.3 × judge_norm (judge 归一化到 [0,1])
 #
-#   - 有 LLM Judge: α=0.5 → final = 0.5×rule + 0.5×judge + format_penalty
-#   - 无 LLM Judge: α=1.0 → final = rule_score + format_penalty
-#   - 格式不合法:   同样算 rule_score（用已解析部分），加更重的 format_penalty
-#
-# 格式惩罚（较轻，辅助信号）:
-#   - 完全无效（0张卡）: -0.3
-#   - 部分有效（<3张卡）: -0.15
-#   - Markdown 包裹:     -0.1
-#   - 幻觉卡片:          -0.15/个, max -0.25
-#   - 遗漏卡片:          -0.025/个, max -0.15
-#   - 总惩罚上限:        -0.4
+# 奖励函数 (v7 — DAPO Filter + Top-3 Precision):
+#   - 格式合法: score = 0.7 × top3_score + 0.3 × judge_norm  (∈ [0, 1])
+#   - 格式不合法: score = 0  (DAPO filter, GRPO 自动产生负 advantage)
 #
 # ★ 所有配置全部硬编码在脚本内，不依赖任何外部环境变量传递 ★
 # ★ 修改超参直接改下方数值即可 ★
@@ -28,8 +25,8 @@ LR="1e-5"
 MINI_BATCH_SIZE="8"
 TRAIN_BATCH_SIZE="32"
 ROLLOUT_N="8"
-KL_COEF="0.05"
-ENTROPY_COEFF="0.01"
+KL_LOSS_COEF="0.01"
+ENTROPY_COEFF="0.005"
 TOTAL_TRAINING_STEPS="500"
 N_GPUS="4"
 VAL_N="16"
@@ -143,13 +140,13 @@ sleep 3
 
 # ── 打印配置（方便排查）──────────────────────────────────────────────
 echo "============================================================"
-echo "GRPO Ranking 训练配置"
+echo "GRPO Ranking v7 训练配置 (DAPO+Top3)"
 echo "  DATASET             = ${DATASET}"
 echo "  LR                  = ${LR}"
 echo "  TRAIN_BATCH_SIZE    = ${TRAIN_BATCH_SIZE}"
 echo "  MINI_BATCH_SIZE     = ${MINI_BATCH_SIZE}"
 echo "  ROLLOUT_N           = ${ROLLOUT_N}"
-echo "  KL_COEF             = ${KL_COEF}"
+echo "  KL_LOSS_COEF        = ${KL_LOSS_COEF}"
 echo "  ENTROPY_COEFF       = ${ENTROPY_COEFF}"
 echo "  JUDGE_MODEL         = ${JUDGE_MODEL}"
 echo "  TOTAL_TRAINING_STEPS= ${TOTAL_TRAINING_STEPS}"
@@ -200,7 +197,7 @@ for split, path in [("train", train_path), ("val", val_path)]:
         print(f"[{split}] 分析失败: {e}")
 DATAEOF
 
-# ── 启动训练 ──────────────────────────────────────────────────────────
+# ── 启动训练（v7 DAPO Filter + Top-3 Precision）─────────────────────────
 python -m verl.trainer.main_ppo \
     --config-name baseline_grpo \
     data.train_batch_size=${TRAIN_BATCH_SIZE} \
@@ -217,6 +214,9 @@ python -m verl.trainer.main_ppo \
     actor_rollout_ref.actor.optim.lr_warmup_steps=10 \
     actor_rollout_ref.actor.ppo_mini_batch_size=${MINI_BATCH_SIZE} \
     actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16 \
+    actor_rollout_ref.actor.use_kl_loss=True \
+    actor_rollout_ref.actor.kl_loss_coef=${KL_LOSS_COEF} \
+    actor_rollout_ref.actor.kl_loss_type=low_var_kl \
     actor_rollout_ref.rollout.n=${ROLLOUT_N} \
     actor_rollout_ref.rollout.val_kwargs.n=${VAL_N} \
     actor_rollout_ref.rollout.val_kwargs.temperature=1.0 \
@@ -228,8 +228,7 @@ python -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.top_p=1.0 \
     actor_rollout_ref.rollout.top_k=-1 \
     actor_rollout_ref.actor.entropy_coeff=${ENTROPY_COEFF} \
-    algorithm.rollout_correction.rollout_is=token \
-    algorithm.kl_ctrl.kl_coef=${KL_COEF} \
+    algorithm.norm_adv_by_std_in_grpo=True \
     trainer.total_epochs=30 \
     trainer.total_training_steps=${TOTAL_TRAINING_STEPS} \
     trainer.save_freq=10 \

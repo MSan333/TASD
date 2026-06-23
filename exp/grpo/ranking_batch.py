@@ -6,8 +6,16 @@ Interface: compute_score(data_sources, solution_strs, ground_truths, extra_infos
 Returns List[dict] with "score" + sub-metrics (intent_alignment, strategy_compliance, etc.)
 so BatchRewardManager populates reward_extra_info → SwanLab charts + console logs.
 
-v5: Unified formula — all cases use the same scoring formula:
-    final_score = α × rule_score + (1-α) × judge_score + format_penalty
+v7: DAPO Filter + Top-3 Precision
+    - 格式合法: score = 0.7 × top3 + 0.3 × judge_norm  (∈ [0, 1])
+    - 格式不合法: score = 0  (DAPO filter, GRPO 自动产生负 advantage)
+    - top3: Top-3 Precision, 只看前 3 个位置, 归一化到 [0, 1]
+    - judge_norm: (judge_score + 1) / 2, 归一化到 [0, 1]
+
+论文依据:
+    - DAPO (ByteDance 2025): overlong filtering, 约束与质量解耦
+    - DeepSeek-R1 (2025): reward 分量正交、同范围
+    - 业务需求: 只曝光 Top-3, 后面的位置无业务价值
 
 优化: 同一 sample 的 K 个 rollout 共享 TipBank 检索和意图识别,
 只对各自的 rank_list 做 Knowledge Judge 打分.
@@ -170,16 +178,39 @@ def _batch_with_llm(
             logger.warning("Batch Knowledge Judge failed: %s", e)
             llm_results = [{"score": 0.0}] * len(llm_indices)
 
-    # Assemble final results using unified formula
+    # Assemble final results — v7: DAPO filter + Top-3 Precision
     final_results: List[dict] = []
     llm_idx = 0
 
     for i in range(batch_size):
         fc = format_results[i]
         gt = parsed_gts[i]
-
-        # ── 1. Rule-based Score（所有情况都算，用已解析的部分） ──
         rank_list = fc["rank_list"]
+
+        # ── DAPO Filter: 格式无效 → score=0, 不参与排序质量评分 ──
+        # 依据: DAPO (ByteDance 2025) overlong filtering
+        # GRPO 自动产生负 advantage: valid ∈ [0,1], invalid = 0
+        # 组均值 > 0 → invalid 的 advantage = 0 - mean < 0 → 自然惩罚
+        if not fc["valid"]:
+            final_results.append({
+                "score": 0.0,
+                "judge_score": 0.0,
+                "rule_score": 0.0,
+                "rule_neg_position": 0.0,
+                "rule_pos_position": 0.0,
+                "format_valid": False,
+                "format_penalty": 0.0,
+                "has_markdown": fc.get("has_markdown", False),
+                "n_hallucinated": fc.get("n_hallucinated", 0),
+                "n_missing": fc.get("n_missing", 0),
+                "intent_alignment": 0.0,
+                "strategy_compliance": 0.0,
+                "result_prediction": 0.0,
+                "risk_avoidance": 0.0,
+            })
+            continue
+
+        # ── Top-3 Precision: 只看前 3 个位置的排序质量 ──
         positive_keys = gt.get("positive_keys", []) or gt.get("positive_actions", [])
         negative_keys = gt.get("negative_keys", [])
         rule_result = _rule_based_score(
@@ -188,57 +219,35 @@ def _batch_with_llm(
             negative_keys,
             gt.get("context", {}),
         )
-        rule_score = rule_result["score"]
+        top3_score = rule_result["score"]  # ∈ [0, 1]
 
-        # ── 2. Format Gate & Penalty ──
-        # v5.1 fix: format-invalid outputs get ZERO for rule/judge scores,
-        # only a fixed negative penalty. This prevents the degenerate strategy
-        # where model outputs 1 positive key + garbage and still gets positive reward.
-        # (v3 used FORMAT_PENALTY=-2.0 which provided a clear learning signal)
-        if not fc["valid"]:
-            # Invalid: no rule_score, no judge_score, just penalty
-            if len(rank_list) == 0:
-                format_penalty = -2.0   # 完全无效 — 重罚 (v3 level)
-            elif len(rank_list) < 3:
-                format_penalty = -1.0   # 不足 3 张 — 中罚
-            else:
-                format_penalty = -0.5   # 解析出 ≥3 张但有格式问题 — 轻罚
+        # ── LLM Judge Score ──
+        judge_score = 0.0
+        judge_result = {}
+        has_judge = False
 
-            final_score = format_penalty  # rule_score=0, judge_score=0
-            judge_score = 0.0
-            judge_result = {}
-            rule_score = 0.0  # Don't reward partial parses on invalid output
-            rule_result = {"score": 0.0, "neg_avg_position": 0.0, "pos_avg_position": 0.0}
+        if llm_idx < len(llm_results):
+            judge_result = llm_results[llm_idx]
+            judge_score = judge_result.get("score", 0.0)
+            has_judge = True
+            llm_idx += 1
+
+        # ── v7 公式: 0.7 × top3 + 0.3 × judge_norm ──
+        # top3 ∈ [0, 1], judge ∈ [-1, 1] → judge_norm = (judge + 1) / 2 ∈ [0, 1]
+        if has_judge:
+            judge_norm = (judge_score + 1.0) / 2.0
+            final_score = 0.7 * top3_score + 0.3 * judge_norm
         else:
-            format_penalty = fc["penalty"]
-
-            # ── 3. LLM Judge Score (only for valid outputs) ──
-            judge_score = 0.0
-            judge_result = {}
-            has_judge = False
-
-            if llm_idx < len(llm_results):
-                judge_result = llm_results[llm_idx]
-                judge_score = judge_result.get("score", 0.0)
-                has_judge = True
-                llm_idx += 1
-
-            # ── 4. 统一公式 (only for valid outputs) ──
-            if has_judge:
-                # 有 judge: 50% rule + 50% judge + format_penalty
-                final_score = 0.5 * rule_score + 0.5 * judge_score + format_penalty
-            else:
-                # 无 judge: rule + format_penalty
-                final_score = rule_score + format_penalty
+            final_score = top3_score
 
         final_results.append({
             "score": round(final_score, 4),
             "judge_score": round(judge_score, 4),
-            "rule_score": round(rule_score, 4),
+            "rule_score": round(top3_score, 4),
             "rule_neg_position": rule_result.get("neg_avg_position", 0.0),
             "rule_pos_position": rule_result.get("pos_avg_position", 0.0),
-            "format_valid": fc["valid"],
-            "format_penalty": round(format_penalty, 4),
+            "format_valid": True,
+            "format_penalty": 0.0,
             "has_markdown": fc.get("has_markdown", False),
             "n_hallucinated": fc.get("n_hallucinated", 0),
             "n_missing": fc.get("n_missing", 0),

@@ -1,22 +1,24 @@
-"""Knowledge-Grounded Reward Function (v5 — unified formula).
+"""Knowledge-Grounded Reward Function (v7 — DAPO Filter + Top-3 Precision).
 
 veRL 调用链:
   feedback/__init__.py → exp/grpo/ranking.py → 本文件 compute_reward()
 
-统一公式:
-  final_score = α × rule_score + (1-α) × judge_score + format_penalty
+v7 设计 (基于 DAPO/DeepSeek-R1/PRM 等论文):
+  - 格式合法: score = 0.7 × top3_score + 0.3 × judge_norm  (∈ [0, 1])
+  - 格式不合法: score = 0  (DAPO filter, GRPO 自动产生负 advantage)
 
-  - 有 LLM Judge: α=0.5 → final = 0.5×rule + 0.5×judge + format_penalty
-  - 无 LLM Judge: α=1.0 → final = rule_score + format_penalty
-  - 格式不合法:  同样算 rule_score（用已解析部分），加更重的 format_penalty
+  top3_score: Top-3 Precision, 只看前 3 个位置, 归一化到 [0, 1]
+    - 正样本在 Top-3: 加权奖励 (pos0=1.0, pos1=0.5, pos2=0.33)
+    - 正样本不在 Top-3: 0 (业务不曝光, 无奖惩)
+    - 负样本在 Top-3: 加权惩罚
+    - 负样本不在 Top-3: 0 (业务不曝光, 无奖惩)
+  judge_norm: (judge_score + 1) / 2, 归一化到 [0, 1]
 
-格式惩罚（较轻，辅助信号）:
-  - 完全无效（0张卡）: -0.3
-  - 部分有效（<3张卡）: -0.15
-  - Markdown 包裹:     -0.1
-  - 幻觉卡片:          -0.15/个, max -0.25
-  - 遗漏卡片:          -0.025/个, max -0.15
-  - 总惩罚上限:        -0.4
+论文依据:
+  - DAPO (ByteDance 2025): 约束信号应与质量信号解耦, overlong filter
+  - DeepSeek-R1 (2025): reward 分量应正交、同范围
+  - PRM (Lightman 2023): 更密集的奖励信号
+  - 业务需求: 只曝光 Top-3, 后面的位置无业务价值
 
 环境变量:
   TIPBANK_PATH: TipBank 数据目录 (JSON 文件夹)
@@ -251,8 +253,31 @@ def format_check(raw: str, card_pool: List[str]) -> Dict[str, Any]:
 
 
 # ============================================================================
-# L1b: Rule-based Score — 位置加权排序评分
+# L1b: Top-3 Precision — 只看 Top-3 的排序质量评分
 # ============================================================================
+#
+# 设计依据:
+#   - DAPO (ByteDance 2025): 约束信号应与质量信号解耦
+#   - DeepSeek-R1 (2025): reward 分量应正交、同范围
+#   - 业务需求: 只曝光 Top-3, Top-3 之后的位置无业务价值
+#
+# v7 公式 (DAPO-style filter + Top-3 Precision):
+#   - 格式合法: score = top3_score ∈ [0, 1]  (纯排序质量)
+#   - 格式不合法: score = 0  (GRPO 自动产生负 advantage)
+#
+# 评分逻辑 (只看 Top-3):
+#   正样本在 Top-3: 加权奖励 (pos0=1.0, pos1=0.5, pos2=0.33)
+#   正样本不在 Top-3: 0 (不曝光，无所谓)
+#   负样本在 Top-3: 加权惩罚
+#   负样本不在 Top-3: 0 (不曝光，无所谓)
+#
+# 归一化到 [0, 1]:
+#   pos_norm = (pos_score + max_pos) / (2 * max_pos)
+#   neg_norm = (neg_score + max_neg) / (2 * max_neg)
+#   top3 = 0.6 * pos_norm + 0.4 * neg_norm
+
+_TOP3_WEIGHTS = {0: 1.0, 1: 0.5, 2: 1.0 / 3}
+
 
 def _rule_based_score(
     rank_list: List[str],
@@ -260,104 +285,77 @@ def _rule_based_score(
     negative_keys: List[str],
     ctx: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """位置加权的排序质量评分，覆盖所有位置.
+    """Top-3 Precision: 只看前 3 个位置的排序质量评分.
 
-    核心思路：每张卡片在每个位置都有信号，而不是只看 Top-3.
-    这让 GRPO 组内有更大方差，模型能学到更细粒度的排序策略.
+    业务场景: 线上只曝光 Top-3, 后面的位置没有业务价值.
+    评分逻辑:
+      - 正样本在 Top-3: 加权奖励 (pos0=1.0, pos1=0.5, pos2=0.33)
+      - 正样本不在 Top-3: 0 (不曝光, 无奖惩)
+      - 负样本在 Top-3: 加权惩罚
+      - 负样本不在 Top-3: 0 (不曝光, 无奖惩)
 
-    评分维度:
-      1. negative (60%): 负样本应在排名靠后
-         - 在 Top-3 → 重罚 (越靠前罚越重)
-         - 在中段   → 轻罚
-         - 在后段   → 奖励
-         - 未出现   → 中性 (0)
-      2. positive (30%): 正样本应在排名靠前
-         - 在 Top-3 → 重奖 (越靠前奖越重)
-         - 在中段   → 轻奖
-         - 在后段   → 惩罚
-         - 未出现   → 惩罚 (比放错位置更差)
-      3. context (10%): 非大促期 MSA 卡片不应出现
-
-    位置权重: 1/(i+1) — 越靠前信号越强
+    返回归一化到 [0, 1] 的 top3_score.
     """
-    n = len(rank_list)
-    if n == 0:
-        return {"score": 0.0, "neg_avg_position": 0.0, "pos_avg_position": 0.0}
+    if not rank_list:
+        return {
+            "score": 0.0, "pos_score": 0.0, "neg_score": 0.0,
+            "pos_avg_position": -1.0, "neg_avg_position": -1.0,
+        }
 
-    # ── 1. Negative score: 负样本应在排名靠后 ──
-    neg_score = 0.0
-    neg_positions = []
-    if negative_keys:
-        for key in negative_keys:
-            if key in rank_list:
-                pos = rank_list.index(key)
-                neg_positions.append(pos)
-                weight = 1.0 / (pos + 1)  # 位置权重: pos0=1.0, pos1=0.5, pos2=0.33, pos15=0.0625
-                if pos < 3:
-                    neg_score += -weight      # Top-3: 重罚
-                elif pos < n // 2:
-                    neg_score += -weight * 0.3  # 中段: 轻罚
-                else:
-                    neg_score += weight * 0.5   # 后段: 奖励
-            # else: 未出现 → 0 (中性)
-        neg_score /= len(negative_keys)
-    else:
-        neg_score = 0.0
-    neg_avg_pos = sum(neg_positions) / len(neg_positions) if neg_positions else -1
-
-    # ── 2. Positive score: 正样本应在排名靠前 ──
+    # ── 正样本: 在 Top-3 则奖励，不在则中性 ──
     pos_score = 0.0
+    max_pos = 0.0
     pos_positions = []
     if positive_keys:
         for key in positive_keys:
             if key in rank_list:
                 pos = rank_list.index(key)
                 pos_positions.append(pos)
-                weight = 1.0 / (pos + 1)
                 if pos < 3:
-                    pos_score += weight          # Top-3: 重奖
-                elif pos < n // 2:
-                    pos_score += weight * 0.5    # 中段: 轻奖
-                else:
-                    pos_score += -weight * 0.3   # 后段: 惩罚
-            else:
-                pos_score += -0.3                # 未出现: 惩罚
-        pos_score /= len(positive_keys)
-    else:
-        pos_score = 0.0
-    pos_avg_pos = sum(pos_positions) / len(pos_positions) if pos_positions else -1
-
-    # ── 3. Context score: 非大促期 MSA 卡片不应出现 ──
-    ctx_score = 0.0
-    is_mega = ctx.get("is_mega_period", False)
-    if not is_mega:
-        msa_keywords = ["msa", "mega", "sd_msa"]
-        msa_count = 0
-        for key in rank_list:
-            for kw in msa_keywords:
-                if kw in key.lower():
-                    msa_count += 1
-                    break
-        if msa_count > 0:
-            ctx_score = -0.5  # 有 MSA 卡片出现 → 惩罚
+                    w = _TOP3_WEIGHTS[pos]
+                    pos_score += w
+                    max_pos += w
+            # 不在 Top-3 或未出现: 不奖不罚
+        if max_pos > 0:
+            pos_norm = (pos_score + max_pos) / (2 * max_pos)  # [0.5, 1.0]
         else:
-            ctx_score = 0.5   # 无 MSA 卡片 → 奖励
-
-    # ── 加权求和 ──
-    if positive_keys:
-        score = 0.6 * neg_score + 0.3 * pos_score + 0.1 * ctx_score
+            pos_norm = 0.5  # 没有正样本在 Top-3 → 中性
     else:
-        score = 0.7 * neg_score + 0.3 * ctx_score
+        pos_norm = 1.0  # 无正样本约束 → 满分
 
-    score = max(-1.0, min(1.0, score))
+    # ── 负样本: 在 Top-3 则惩罚，不在则中性 ──
+    neg_score = 0.0
+    max_neg = 0.0
+    neg_positions = []
+    if negative_keys:
+        for key in negative_keys:
+            if key in rank_list:
+                pos = rank_list.index(key)
+                neg_positions.append(pos)
+                if pos < 3:
+                    w = _TOP3_WEIGHTS[pos]
+                    neg_score += -w
+                    max_neg += w
+            # 不在 Top-3 或未出现: 不奖不罚
+        if max_neg > 0:
+            neg_norm = (neg_score + max_neg) / (2 * max_neg)  # [0.0, 1.0]
+        else:
+            neg_norm = 0.5  # 没有负样本在 Top-3 → 中性
+    else:
+        neg_norm = 1.0  # 无负样本约束 → 满分
+
+    # ── 组合: 60% positive + 40% negative ──
+    top3_score = 0.6 * pos_norm + 0.4 * neg_norm  # ∈ [0, 1]
+
+    pos_avg_pos = sum(pos_positions) / len(pos_positions) if pos_positions else -1
+    neg_avg_pos = sum(neg_positions) / len(neg_positions) if neg_positions else -1
 
     return {
-        "score": round(score, 4),
-        "neg_avg_position": round(neg_avg_pos, 2),
-        "pos_avg_position": round(pos_avg_pos, 2),
-        "neg_score": round(neg_score, 4),
+        "score": round(top3_score, 4),
         "pos_score": round(pos_score, 4),
-        "ctx_score": round(ctx_score, 4),
+        "neg_score": round(neg_score, 4),
+        "pos_avg_position": round(pos_avg_pos, 2),
+        "neg_avg_position": round(neg_avg_pos, 2),
     }
 
 
@@ -402,55 +400,71 @@ def compute_reward(
     rule_result = _rule_based_score(rank_list, positive_keys, negative_keys, ctx)
     rule_score = rule_result["score"]
 
-    # ── 3. Format Penalty ──
+    # ── 3. DAPO-style Format Filter (v7) ──
+    # 格式不合法: score = 0, GRPO 自动产生负 advantage (无需加法惩罚)
+    # 格式合法: score = top3 排序质量 ∈ [0, 1]
     if not fc["valid"]:
-        if len(rank_list) == 0:
-            format_penalty = -0.3   # 完全无效
-        else:
-            format_penalty = -0.15  # 部分有效但不足 3 张
-    else:
-        format_penalty = fc["penalty"]  # 格式合法，可能有 markdown/幻觉/遗漏惩罚
+        # 格式无效: 直接给 0 分，不参与排序质量评分
+        return {
+            "score": 0.0,
+            "format_valid": False,
+            "format_penalty": 0.0,
+            "has_markdown": fc.get("has_markdown", False),
+            "n_hallucinated": fc.get("n_hallucinated", 0),
+            "n_missing": fc.get("n_missing", 0),
+            "rule_score": 0.0,
+            "rule_neg_position": 0.0,
+            "rule_pos_position": 0.0,
+            "judge_score": 0.0,
+            "intent_alignment": 0.0,
+            "strategy_compliance": 0.0,
+            "result_prediction": 0.0,
+            "risk_avoidance": 0.0,
+            "rank_list": rank_list,
+            "feedback": "",
+        }
 
     # ── 4. LLM Judge（格式合法时才有意义） ──
     judge_score = 0.0
     judge_result = {}
     has_judge = False
 
-    if fc["valid"]:
-        client = _get_llm_client()
-        if client:
-            judge_model = os.environ.get("JUDGE_MODEL", "qwen-plus")
-            query_model = os.environ.get("QUERY_MODEL", "qwen-turbo")
+    client = _get_llm_client()
+    if client:
+        judge_model = os.environ.get("JUDGE_MODEL", "qwen-plus")
+        query_model = os.environ.get("QUERY_MODEL", "qwen-turbo")
 
-            # TipBank Retrieval
-            tips = _retrieve_tips(ctx, card_pool, client, query_model)
+        # TipBank Retrieval
+        tips = _retrieve_tips(ctx, card_pool, client, query_model)
 
-            # Intent Recognition
-            from .intent_recognizer import recognize_intent
-            intent = recognize_intent(ctx, client, judge_model)
+        # Intent Recognition
+        from .intent_recognizer import recognize_intent
+        intent = recognize_intent(ctx, client, judge_model)
 
-            # Knowledge Judge
-            from .knowledge_judge import knowledge_judge_single
-            judge_result = knowledge_judge_single(
-                rank_list, ctx, tips, intent,
-                positive_keys, negative_keys,
-                client, judge_model,
-            )
-            judge_score = judge_result.get("score", 0.0)
-            has_judge = True
+        # Knowledge Judge
+        from .knowledge_judge import knowledge_judge_single
+        judge_result = knowledge_judge_single(
+            rank_list, ctx, tips, intent,
+            positive_keys, negative_keys,
+            client, judge_model,
+        )
+        judge_score = judge_result.get("score", 0.0)
+        has_judge = True
 
-    # ── 5. 统一公式 ──
+    # ── 5. v7 公式: DAPO filter + Top-3 Precision ──
+    # top3_score ∈ [0, 1] (已由 _rule_based_score 归一化)
+    # judge_score ∈ [-1, 1] → judge_norm = (judge + 1) / 2 ∈ [0, 1]
+    # final = 0.7 * top3 + 0.3 * judge_norm  (rule 确定性信号为主)
     if has_judge:
-        # 有 judge: 50% rule + 50% judge + format_penalty
-        final_score = 0.5 * rule_score + 0.5 * judge_score + format_penalty
+        judge_norm = (judge_score + 1.0) / 2.0  # [-1,1] → [0,1]
+        final_score = 0.7 * rule_score + 0.3 * judge_norm
     else:
-        # 无 judge: rule + format_penalty
-        final_score = rule_score + format_penalty
+        final_score = rule_score
 
     return {
         "score": round(final_score, 4),
-        "format_valid": fc["valid"],
-        "format_penalty": round(format_penalty, 4),
+        "format_valid": True,
+        "format_penalty": 0.0,
         "has_markdown": fc.get("has_markdown", False),
         "n_hallucinated": fc.get("n_hallucinated", 0),
         "n_missing": fc.get("n_missing", 0),
