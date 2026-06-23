@@ -62,9 +62,7 @@ export MODEL_PATH="/data/oss_bucket_0/ad/guoshauile.gsl/model/qwen3-8b"
 
 # ── LLM Judge (DashScope) ─────────────────────────────────────────────
 # Reward 函数中的 Knowledge-Grounded Judge 使用 DashScope API 打分。
-# ★ 请设置环境变量（到 https://dashscope.console.aliyun.com 获取）★
-# export OPENAI_API_KEY="你的dashscope_api_key"
-export OPENAI_API_KEY="${OPENAI_API_KEY:-}"
+export OPENAI_API_KEY="${OPENAI_API_KEY:-sk-93bf8a433943448bad6611ca5532a113}"
 export OPENAI_BASE_URL="${OPENAI_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}"
 export OPENAI_MODEL="${OPENAI_MODEL:-qwen3.6-max-preview}"
 

@@ -942,7 +942,8 @@ class RayPPOTrainer:
             )
 
             # we only do validation on rule-based rm
-            if self.config.reward_model.enable and test_batch[0].non_tensor_batch["reward_model"]["style"] == "model":
+            rm_info = test_batch[0].non_tensor_batch.get("reward_model", {})
+            if self.config.reward_model.enable and rm_info.get("style") == "model":
                 return {}
 
             ground_truths = [
@@ -2469,6 +2470,18 @@ class RayPPOTrainer:
                 gradient_norm = metrics.get("actor/grad_norm", None)
                 metrics.update(compute_variance_proxy_metrics(batch=batch, gradient_norm=gradient_norm))
                 # Note: mismatch metrics (KL, PPL, etc.) are collected at line 1179 after advantage computation
+
+                # aggregate reward sub-metrics (intent_alignment, strategy_compliance, etc.)
+                # into training metrics so they appear in SwanLab charts and console logs
+                if reward_extra_infos_dict:
+                    for key, values in reward_extra_infos_dict.items():
+                        if key in ("score", "format_valid", "feedback", "rank_list"):
+                            continue
+                        numeric_vals = [v for v in values if isinstance(v, (int, float)) and v is not None]
+                        if numeric_vals:
+                            metrics[f"reward/{key}/mean"] = sum(numeric_vals) / len(numeric_vals)
+                            metrics[f"reward/{key}/max"] = max(numeric_vals)
+                            metrics[f"reward/{key}/min"] = min(numeric_vals)
 
                 # this is experimental and may be changed/removed in the future in favor of a general-purpose one
                 if isinstance(self.train_dataloader.sampler, AbstractCurriculumSampler):

@@ -59,7 +59,11 @@ class BatchRewardManager(AbstractRewardManager):
             response_str = self.tokenizer.decode(valid_response_ids, skip_special_tokens=True)
             responses_str.append(response_str)
 
-        ground_truths = [item.non_tensor_batch["reward_model"].get("ground_truth", None) for item in data]
+        ground_truths = [
+            item.non_tensor_batch.get("reward_model", {}).get("ground_truth", None)
+            or item.non_tensor_batch.get("ground_truth", None)
+            for item in data
+        ]
         data_sources = data.non_tensor_batch[self.reward_fn_key]
         rollout_reward_scores = data.non_tensor_batch.get("reward_scores", [{} for _ in range(len(data))])
         extras = data.non_tensor_batch.get("extra_info", [{} for _ in range(len(data))])
@@ -113,7 +117,7 @@ class BatchRewardManager(AbstractRewardManager):
             if already_printed.get(data_source, 0) < self.num_examine:
                 response_str = self.tokenizer.decode(data.batch["responses"][i][:length], skip_special_tokens=True)
                 prompt_str = self.tokenizer.decode(data.batch["prompts"][i], skip_special_tokens=True)
-                ground_truth = data[i].non_tensor_batch["reward_model"].get("ground_truth", None)
+                ground_truth = data[i].non_tensor_batch.get("reward_model", {}).get("ground_truth", None) or data[i].non_tensor_batch.get("ground_truth", None)
                 print("[prompt]", prompt_str)
                 print("[response]", response_str)
                 print("[ground_truth]", ground_truth)

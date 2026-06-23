@@ -40,13 +40,14 @@ async def batch_knowledge_judge(
     rank_lists: List[List[str]],
     ground_truths: List[Dict],
     max_concurrent: int = 20,
-) -> List[float]:
+) -> List[Dict]:
     """Batch async Knowledge-Grounded Judge.
 
     Optimization: group by context_key so same-sample rollouts share
     TipBank retrieval and intent recognition (only judge scoring differs).
 
-    Returns List[float] of scores in [-1.0, 1.0].
+    Returns List[Dict] — each dict has "score" + sub-metrics
+    (intent_alignment, strategy_compliance, result_prediction, risk_avoidance).
     """
     from openai import AsyncOpenAI, OpenAI
 
@@ -64,7 +65,7 @@ async def batch_knowledge_judge(
     query_model = os.environ.get("QUERY_MODEL", "qwen-turbo")
 
     if not api_key:
-        return [0.0] * len(rank_lists)
+        return [{"score": 0.0} for _ in rank_lists]
 
     async_client = AsyncOpenAI(api_key=api_key, base_url=base_url, timeout=60.0, max_retries=2)
     sync_client = OpenAI(api_key=api_key, base_url=base_url)
@@ -125,7 +126,8 @@ async def batch_knowledge_judge(
     matching_skill = _get_matching_prompt() or "（无匹配准则）"
 
     # --- Phase 2: Async judge scoring for each rank_list ---
-    async def _judge_one(idx: int) -> float:
+    async def _judge_one(idx: int) -> Dict:
+        """返回完整 judge result dict (score + 各维度子分数)."""
         async with semaphore:
             gt = ground_truths[idx]
             key = _context_key(gt)
@@ -142,10 +144,10 @@ async def batch_knowledge_judge(
             prompt = JUDGE_PROMPT.replace("{retrieved_tips}", format_tips_for_judge(tips_result))
             prompt = prompt.replace("{intent_result}", json.dumps(intent, ensure_ascii=False))
             prompt = prompt.replace("{matching_skill}", matching_skill)
-            prompt = prompt.replace("{rank_list}", json.dumps(rank_lists[idx][:8], ensure_ascii=False))
+            prompt = prompt.replace("{rank_list}", json.dumps(rank_lists[idx], ensure_ascii=False))
             prompt = prompt.replace("{positive_actions}", json.dumps(pos, ensure_ascii=False))
             prompt = prompt.replace("{negative_actions}", json.dumps(neg, ensure_ascii=False))
-            prompt = prompt.replace("{card_pool}", json.dumps(card_pool[:12], ensure_ascii=False))
+            prompt = prompt.replace("{card_pool}", json.dumps(card_pool, ensure_ascii=False))
 
             try:
                 resp = await async_client.chat.completions.create(
@@ -157,15 +159,17 @@ async def batch_knowledge_judge(
                 )
                 raw = resp.choices[0].message.content or ""
                 result = parse_judge_response(raw)
-                return result.get("score", 0.0)
+                result.setdefault("score", 0.0)
+                return result
             except Exception as e:
                 logger.warning("Judge call failed [%d]: %s", idx, e)
-                return 0.0
+                return {"score": 0.0}
 
     tasks = [_judge_one(i) for i in range(len(rank_lists))]
     results = await asyncio.gather(*tasks)
 
-    valid_scores = [s for s in results if s != 0.0]
+    scores_only = [r.get("score", 0.0) for r in results]
+    valid_scores = [s for s in scores_only if s != 0.0]
     avg = sum(valid_scores) / max(len(valid_scores), 1) if valid_scores else 0.0
     logger.info(
         "Batch Knowledge Judge: total=%d, contexts=%d, avg_score=%.4f",

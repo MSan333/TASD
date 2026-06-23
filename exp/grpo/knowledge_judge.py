@@ -88,10 +88,11 @@ JUDGE_PROMPT = """\
 - 排序触犯了防御型策略的约束 → 严重扣分
 
 ### C. 结果预测 (20%)
-模型排序与商家实际行为的吻合度：
-- 正向操作排在 Top-3 → 加分
-- 负向操作排在 Top-3 → 扣分
-（注意：商家行为本身不一定最优，需结合意图和策略综合判断）
+模型排序与商家实际行为的吻合度（只关注 Top-3，因为线上只曝光前 3 位）：
+- 正向操作（positive_actions）排在 Top-3 → 加分
+- 负向操作（negative_actions）排在 Top-3 → 严重扣分
+- 负向操作不在 Top-3 → 不扣分（第 4 位到最后一位没有区别）
+（注意：如果 positive_actions 为空，则只评估 negative_actions 是否在 Top-3）
 
 ### D. 风险规避 (10%)
 - 资金风险下推了花钱卡 → 严重扣分
@@ -192,10 +193,10 @@ def knowledge_judge_single(
     prompt = JUDGE_PROMPT.replace("{retrieved_tips}", format_tips_for_judge(tips))
     prompt = prompt.replace("{intent_result}", json.dumps(intent, ensure_ascii=False))
     prompt = prompt.replace("{matching_skill}", matching_skill)
-    prompt = prompt.replace("{rank_list}", json.dumps(rank_list[:8], ensure_ascii=False))
+    prompt = prompt.replace("{rank_list}", json.dumps(rank_list, ensure_ascii=False))
     prompt = prompt.replace("{positive_actions}", json.dumps(positive_keys, ensure_ascii=False))
     prompt = prompt.replace("{negative_actions}", json.dumps(negative_keys, ensure_ascii=False))
-    prompt = prompt.replace("{card_pool}", json.dumps(card_pool[:12], ensure_ascii=False))
+    prompt = prompt.replace("{card_pool}", json.dumps(card_pool, ensure_ascii=False))
 
     try:
         resp = client.chat.completions.create(

@@ -1,16 +1,26 @@
 #!/usr/bin/env bash
 # =============================================================================
-# GRPO Ranking 训练脚本 — guoshauile.gsl OSS 路径
+# GRPO Ranking v4 训练脚本 — A100 单节点 4 卡版本
+#
+# 改进点（相比 v3）：
+# - L1 格式检查层：检测 Markdown 包裹、幻觉卡片、遗漏卡片
+# - 格式惩罚叠加到 judge score 上（final_score = judge_score + format_penalty）
+# - 返回详细子指标（format_penalty, has_markdown, n_hallucinated 等）
+# - 所有指标通过 reward_extra_info 传递到 SwanLab
+#
+# 格式惩罚配置：
+# - Markdown 包裹:     -0.2  (强先验，同组共享，低惩罚)
+# - 幻觉卡片:          -0.3/个, max -0.5  (个体差异，中惩罚)
+# - 遗漏卡片:          -0.05/个, max -0.3  (易恢复，低惩罚)
+# - 总惩罚上限:        -0.8
+# - 完全无效输出:      -2.0 (FORMAT_PENALTY 兜底)
+#
+# ★ A100 单节点 4 卡配置 ★
+# - 1 节点 × 4 A100 80GB = 4 GPU
+# - gpu_memory_utilization=0.7 (A100 内存管理更成熟)
 #
 # ★ 所有配置全部硬编码在脚本内，不依赖任何外部环境变量传递 ★
 # ★ 修改超参直接改下方数值即可 ★
-#
-# OSS 目录结构:
-#   oss://lazada-ai-model/ad/guoshauile.gsl/
-#     ├── data/          训练/测试数据
-#     ├── model/         基底模型 & checkpoint
-#     ├── log/           训练日志
-#     └── result/        最终模型输出
 # =============================================================================
 set +xo pipefail
 
@@ -24,7 +34,7 @@ KL_COEF="0.05"
 TOTAL_TRAINING_STEPS="500"
 N_GPUS="4"
 VAL_N="16"
-PROJECT_NAME="GRPO-Ranking"
+PROJECT_NAME="GRPO-Ranking-A100"
 
 # ── 路径（硬编码）──────────────────────────────────────────────────────
 OSS_ROOT="/data/oss_bucket_0/ad/guoshauile.gsl"
@@ -33,7 +43,7 @@ MODEL_PATH="/data/oss_bucket_0/ad/guoshauile.gsl/model/base/qwen3-8b"
 train_data_path="${OSS_ROOT}/data/${DATASET}/train.parquet"
 val_data_path="${OSS_ROOT}/data/${DATASET}/test.parquet"
 model_path="${MODEL_PATH}"
-save_path="${OSS_ROOT}/result/${JOB_NAME:-grpo_ranking}"
+save_path="${OSS_ROOT}/result/${JOB_NAME:-grpo_ranking_v4_a100}"
 
 # ── 环境变量（硬编码）─────────────────────────────────────────────────
 export PYTHONPATH="$(pwd):${PYTHONPATH:-}"
@@ -67,6 +77,7 @@ export TORCH_WARN_ACCUMULATE_GRAD_STREAM=0
 echo "=== 检查当前环境 ==="
 python -c "import transformers; print(f'  transformers={transformers.__version__}')" 2>&1 || echo "  transformers 未安装"
 python -c "import vllm; print(f'  vllm={vllm.__version__}')" 2>&1 || echo "  vllm 未安装"
+nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>&1 || echo "  nvidia-smi 失败"
 
 echo "=== 安装 TASD 项目（不拉依赖） ==="
 pip install -e . --no-deps --no-build-isolation 2>&1
@@ -134,7 +145,7 @@ sleep 3
 
 # ── 打印配置（方便排查）──────────────────────────────────────────────
 echo "============================================================"
-echo "GRPO Ranking 训练配置"
+echo "GRPO Ranking v4 A100 训练配置"
 echo "  DATASET             = ${DATASET}"
 echo "  LR                  = ${LR}"
 echo "  TRAIN_BATCH_SIZE    = ${TRAIN_BATCH_SIZE}"
@@ -146,7 +157,8 @@ echo "  VAL_N               = ${VAL_N}"
 echo "  MODEL_PATH          = ${model_path}"
 echo "  train_data          = ${train_data_path}"
 echo "  val_data            = ${val_data_path}"
-echo "  JOB_NAME            = ${JOB_NAME:-grpo_ranking}"
+echo "  JOB_NAME            = ${JOB_NAME:-grpo_ranking_v4_a100}"
+echo "  PROJECT_NAME        = ${PROJECT_NAME}"
 echo "============================================================"
 
 # ── 启动训练 ──────────────────────────────────────────────────────────
@@ -166,7 +178,7 @@ python -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.n=${ROLLOUT_N} \
     actor_rollout_ref.rollout.val_kwargs.n=${VAL_N} \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
-    actor_rollout_ref.rollout.gpu_memory_utilization=0.5 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.7 \
     algorithm.rollout_correction.rollout_is=token \
     algorithm.kl_ctrl.kl_coef=${KL_COEF} \
     trainer.total_epochs=30 \
@@ -177,6 +189,6 @@ python -m verl.trainer.main_ppo \
     trainer.val_before_train=False \
     trainer.default_local_dir="${save_path}" \
     trainer.project_name="${PROJECT_NAME}" \
-    trainer.experiment_name="${JOB_NAME:-grpo_ranking}" \
-    trainer.group_name="GRPO-ranking" \
+    trainer.experiment_name="${JOB_NAME:-grpo_ranking_v4_a100}" \
+    trainer.group_name="GRPO-ranking-A100" \
     "trainer.logger=[console,swanlab]"

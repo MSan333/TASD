@@ -1,39 +1,34 @@
 #!/usr/bin/env bash
 # =============================================================================
-# GRPO Ranking v4 训练脚本 — 格式惩罚版
+# GRPO Ranking v5 训练脚本 — 统一公式版
 #
-# 改进点（相比 v3）：
-# - L1 格式检查层：检测 Markdown 包裹、幻觉卡片、遗漏卡片
-# - 格式惩罚叠加到 judge score 上（final_score = judge_score + format_penalty）
-# - 返回详细子指标（format_penalty, has_markdown, n_hallucinated 等）
-# - 所有指标通过 reward_extra_info 传递到 SwanLab
+# 奖励函数（统一公式）:
+#   final_score = α × rule_score + (1-α) × judge_score + format_penalty
 #
-# 格式惩罚配置：
-# - Markdown 包裹:     -0.2  (强先验，同组共享，低惩罚)
-# - 幻觉卡片:          -0.3/个, max -0.5  (个体差异，中惩罚)
-# - 遗漏卡片:          -0.05/个, max -0.3  (易恢复，低惩罚)
-# - 总惩罚上限:        -0.8
-# - 完全无效输出:      -2.0 (FORMAT_PENALTY 兜底)
+#   - 有 LLM Judge: α=0.5 → final = 0.5×rule + 0.5×judge + format_penalty
+#   - 无 LLM Judge: α=1.0 → final = rule_score + format_penalty
+#   - 格式不合法:   同样算 rule_score（用已解析部分），加更重的 format_penalty
+#
+# 格式惩罚（较轻，辅助信号）:
+#   - 完全无效（0张卡）: -0.3
+#   - 部分有效（<3张卡）: -0.15
+#   - Markdown 包裹:     -0.1
+#   - 幻觉卡片:          -0.15/个, max -0.25
+#   - 遗漏卡片:          -0.025/个, max -0.15
+#   - 总惩罚上限:        -0.4
 #
 # ★ 所有配置全部硬编码在脚本内，不依赖任何外部环境变量传递 ★
 # ★ 修改超参直接改下方数值即可 ★
-#
-# OSS 目录结构:
-#   oss://lazada-ai-model/ad/guoshauile.gsl/
-#     ├── data/          训练/测试数据
-#     ├── model/         基底模型 & checkpoint
-#     ├── log/           训练日志
-#     └── result/        最终模型输出
 # =============================================================================
 set +xo pipefail
 
 # ── 训练超参（硬编码，改这里即可）──────────────────────────────────────
-DATASET="ranking"
+DATASET="minirank"
 LR="1e-5"
 MINI_BATCH_SIZE="8"
 TRAIN_BATCH_SIZE="32"
 ROLLOUT_N="8"
-KL_COEF="0.15"
+KL_COEF="0.05"
 ENTROPY_COEFF="0.01"
 TOTAL_TRAINING_STEPS="500"
 N_GPUS="4"
@@ -45,7 +40,7 @@ OSS_ROOT="/data/oss_bucket_0/ad/guoshauile.gsl"
 MODEL_PATH="/data/oss_bucket_0/ad/guoshauile.gsl/model/base/qwen3-8b"
 
 train_data_path="${OSS_ROOT}/data/${DATASET}/train.parquet"
-val_data_path="${OSS_ROOT}/data/${DATASET}/test.parquet"
+val_data_path="${OSS_ROOT}/data/${DATASET}/test_small.parquet"  # 100 prompts (原 1982)
 model_path="${MODEL_PATH}"
 save_path="${OSS_ROOT}/result/${JOB_NAME:-grpo_ranking}"
 
@@ -55,7 +50,7 @@ export PYTHONPATH="$(pwd):${PYTHONPATH:-}"
 # LLM Judge (DashScope)
 export OPENAI_API_KEY="sk-93bf8a433943448bad6611ca5532a113"
 export OPENAI_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
-export JUDGE_MODEL="deepseek-v4-flash"
+export JUDGE_MODEL="qwen3.6-max-preview"
 
 # vLLM
 unset VLLM_ATTENTION_BACKEND
@@ -184,8 +179,11 @@ for split, path in [("train", train_path), ("val", val_path)]:
             print(f"  唯一 prompt 数: {n_unique}")
             print(f"  每 prompt 平均样本: {len(df)/n_unique:.1f}")
 
-        if "ground_truth" in df.columns:
-            gts = df["ground_truth"].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
+        # ground_truth 在 reward_model 列内
+        if "reward_model" in df.columns:
+            gts = df["reward_model"].apply(
+                lambda x: json.loads(x["ground_truth"]) if isinstance(x, dict) else json.loads(x)
+            )
 
             pos_lens = gts.apply(lambda x: len(x.get("positive_actions", [])))
             pos_empty = (pos_lens == 0).mean()
@@ -208,6 +206,9 @@ python -m verl.trainer.main_ppo \
     data.train_batch_size=${TRAIN_BATCH_SIZE} \
     data.train_files="${train_data_path}" \
     data.val_files="${val_data_path}" \
+    data.max_prompt_length=4096 \
+    data.max_response_length=2048 \
+    max_model_len=8192 \
     reward_model.reward_manager=batch \
     custom_reward_function.path="$(pwd)/verl/utils/reward_score/feedback/__init__.py" \
     custom_reward_function.name=compute_score_batch \
@@ -218,8 +219,14 @@ python -m verl.trainer.main_ppo \
     actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16 \
     actor_rollout_ref.rollout.n=${ROLLOUT_N} \
     actor_rollout_ref.rollout.val_kwargs.n=${VAL_N} \
+    actor_rollout_ref.rollout.val_kwargs.temperature=1.0 \
+    actor_rollout_ref.rollout.val_kwargs.top_p=0.7 \
+    actor_rollout_ref.rollout.val_kwargs.top_k=-1 \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.gpu_memory_utilization=0.5 \
+    actor_rollout_ref.rollout.temperature=1.0 \
+    actor_rollout_ref.rollout.top_p=1.0 \
+    actor_rollout_ref.rollout.top_k=-1 \
     actor_rollout_ref.actor.entropy_coeff=${ENTROPY_COEFF} \
     algorithm.rollout_correction.rollout_is=token \
     algorithm.kl_ctrl.kl_coef=${KL_COEF} \

@@ -19,19 +19,12 @@
 #       lazada_llm_ad_h20
 # =============================================================================
 
-# ── Nebula 账号配置（从环境变量读取）────────────────────────────────────
-# ★ 提交前必须设置以下环境变量 ★
-# 建议写入 ~/.bashrc 避免每次手动设置：
-#
-#   export OPENLM_TOKEN="你的openlm_token"
-#   export OSS_ACCESS_ID="你的oss_access_id"
-#   export OSS_ACCESS_KEY="你的oss_access_key"
-#
+# ── Nebula 账号配置（硬编码）────────────────────────────────────────────
 QUEUE="${3:-lazada_llm_ad_h20}"     # 默认队列（H20），可改为 ae_h100
 WORLD_SIZE="${2:-1}"                # 节点数，单节点填 1
-OPENLM_TOKEN="${OPENLM_TOKEN:?请先设置: export OPENLM_TOKEN=\"你的openlm_token\"}"
-OSS_ACCESS_ID="${OSS_ACCESS_ID:?请先设置: export OSS_ACCESS_ID=\"你的oss_access_id\"}"
-OSS_ACCESS_KEY="${OSS_ACCESS_KEY:?请先设置: export OSS_ACCESS_KEY=\"你的oss_access_key\"}"
+OPENLM_TOKEN="OPENLM_539409_RjpprGplVLfSHXizAuEFtilWmFcpZFFE"
+OSS_ACCESS_ID="${OSS_ACCESS_ID:?请设置 OSS_ACCESS_ID 环境变量}"
+OSS_ACCESS_KEY="${OSS_ACCESS_KEY:?请设置 OSS_ACCESS_KEY 环境变量}"
 export OPENLM_TOKEN OSS_ACCESS_ID OSS_ACCESS_KEY
 OSS_ENDPOINT="oss-cn-hangzhou-zmf.aliyuncs.com"
 OSS_BUCKET="lazada-ai-model"

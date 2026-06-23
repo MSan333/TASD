@@ -1,12 +1,22 @@
-"""Knowledge-Grounded Reward Function (v4 — with format penalties).
+"""Knowledge-Grounded Reward Function (v5 — unified formula).
 
 veRL 调用链:
   feedback/__init__.py → exp/grpo/ranking.py → 本文件 compute_reward()
 
-架构 (三层):
-  L0: Format Gate + Penalty — 格式校验 + Markdown/幻觉/缺失惩罚
-  L1: Format Check — 返回详细格式诊断信息
-  L2: Knowledge-Grounded Judge — TipBank 检索 + 意图识别 + 知识对比打分
+统一公式:
+  final_score = α × rule_score + (1-α) × judge_score + format_penalty
+
+  - 有 LLM Judge: α=0.5 → final = 0.5×rule + 0.5×judge + format_penalty
+  - 无 LLM Judge: α=1.0 → final = rule_score + format_penalty
+  - 格式不合法:  同样算 rule_score（用已解析部分），加更重的 format_penalty
+
+格式惩罚（较轻，辅助信号）:
+  - 完全无效（0张卡）: -0.3
+  - 部分有效（<3张卡）: -0.15
+  - Markdown 包裹:     -0.1
+  - 幻觉卡片:          -0.15/个, max -0.25
+  - 遗漏卡片:          -0.025/个, max -0.15
+  - 总惩罚上限:        -0.4
 
 环境变量:
   TIPBANK_PATH: TipBank 数据目录 (JSON 文件夹)
@@ -24,9 +34,6 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
-
-FORMAT_PENALTY = -2.0
-_THINK_END = "\x3c/think\x3e"
 
 # ============================================================================
 # 进程级单例
@@ -79,12 +86,33 @@ def _get_llm_client():
 # ============================================================================
 
 def _parse_ranking(raw: str, card_pool: List[str]) -> List[str]:
-    """解析模型输出为 rank_list, 去重并过滤非法卡片."""
+    """解析模型输出为 rank_list, 去重并过滤非法卡片.
+
+    剥离顺序:
+      1. 移除 <think>...</think> 块（包括未闭合的 ）
+      2. 移除 ``` markdown 代码块包裹
+      3. **提取 JSON 部分**（如果前面有思考文本）
+      4. 解析 JSON 数组
+      5. 过滤掉不在 card_pool 中的 key
+    """
     s = raw.strip()
+    # 1. 剥离 <think>...</think> 块（处理闭合和未闭合两种情况）
+    s = re.sub(r'<think>.*?</think>', '', s, flags=re.DOTALL)
+    s = re.sub(r'<think>.*$', '', s, flags=re.DOTALL)  # 未闭合的
+    # 2. 移除 markdown 代码块
     s = re.sub(r"^```(?:json)?\s*", "", s)
     s = re.sub(r"\s*```$", "", s).strip()
-    if _THINK_END in s:
-        s = s.split(_THINK_END)[-1].strip()
+
+    # 3. **提取 JSON 部分** — 找到第一个 [ 和最后一个 ] 之间的内容
+    # 这能处理模型输出思考内容后跟 JSON 的情况
+    start_idx = s.find('[')
+    end_idx = s.rfind(']')
+    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+        s = s[start_idx:end_idx + 1]
+
+    # 4. 解析 JSON (长度限制防止超深嵌套导致 RecursionError)
+    if len(s) > 10000:
+        return []
     try:
         arr = json.loads(s)
         if isinstance(arr, list):
@@ -96,7 +124,7 @@ def _parse_ranking(raw: str, card_pool: List[str]) -> List[str]:
                     result.append(x)
                     seen.add(x)
             return result
-    except (json.JSONDecodeError, TypeError):
+    except (json.JSONDecodeError, TypeError, ValueError, OverflowError, RecursionError):
         pass
     return []
 
@@ -105,7 +133,7 @@ def format_gate(raw: str, card_pool: List[str]) -> Tuple[bool, List[str]]:
     """L0 格式校验: 合法排序至少 3 张有效卡片."""
     rank_list = _parse_ranking(raw, card_pool)
     if len(rank_list) < 3:
-        return False, []
+        return False, rank_list  # 仍然返回已解析的部分，用于渐进打分
     return True, rank_list
 
 
@@ -131,12 +159,27 @@ def _detect_format_issues(raw: str, card_pool: List[str], rank_list: List[str]) 
     # Re-parse to see what model actually output (before filtering)
     pool_set = set(card_pool)
     s = stripped
+    # Strip thinking blocks (same as _parse_ranking)
+    s = re.sub(r'<think>.*?</think>', '', s, flags=re.DOTALL)
+    s = re.sub(r'<think>.*$', '', s, flags=re.DOTALL)
     s = re.sub(r"^```(?:json)?\s*", "", s)
     s = re.sub(r"\s*```$", "", s).strip()
-    if _THINK_END in s:
-        s = s.split(_THINK_END)[-1].strip()
 
+    # Extract JSON part (same as _parse_ranking)
+    start_idx = s.find('[')
+    end_idx = s.rfind(']')
+    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+        s = s[start_idx:end_idx + 1]
+
+    # 4. 检测幻觉 key（长度限制防止超深嵌套）
     hallucinated_keys = []
+    if len(s) > 10000:
+        return {
+            "has_markdown": has_markdown,
+            "n_hallucinated": 0,
+            "hallucinated_keys": [],
+            "n_missing": max(0, len(card_pool) - len(rank_list)),
+        }
     try:
         arr = json.loads(s)
         if isinstance(arr, list):
@@ -145,7 +188,7 @@ def _detect_format_issues(raw: str, card_pool: List[str], rank_list: List[str]) 
                 if isinstance(item, str) and item not in pool_set and item not in seen_hallucinated:
                     hallucinated_keys.append(item)
                     seen_hallucinated.add(item)
-    except (json.JSONDecodeError, TypeError):
+    except (json.JSONDecodeError, TypeError, ValueError, OverflowError, RecursionError):
         pass
 
     n_valid = len(rank_list)
@@ -161,32 +204,28 @@ def _detect_format_issues(raw: str, card_pool: List[str], rank_list: List[str]) 
 
 
 def _compute_format_penalty(issues: Dict) -> float:
-    """计算格式惩罚（叠加到 judge score 上）.
+    """计算格式惩罚（叠加到最终得分上）.
 
     设计原则 (GRPO 友好):
-      - judge 信号 (range=2.0) >> 格式惩罚 (max=0.8)
-      - 格式惩罚占 judge 的 ~40%，作为辅助信号
-      - 同组 rollout 共享的格式问题 (如 markdown) 给低惩罚
-      - 个体差异的格式问题 (如幻觉) 给中等惩罚
-      - 格式无效的 FORMAT_PENALTY=-2.0 负责兜底
+      - rule/judge 信号是主信号，格式惩罚是辅助
+      - 总惩罚上限 -0.4，不至于压过排序质量信号
 
     Penalty structure:
-      - Markdown wrapping:     -0.2   (强先验, 同组共享, 低惩罚)
-      - Hallucinated keys:     -0.3 each, max -0.5  (个体差异, 中惩罚)
-      - Missing pool cards:    -0.05 each, max -0.3  (易恢复, 低惩罚)
-    总惩罚上限: -0.8
+      - Markdown wrapping:     -0.1
+      - Hallucinated keys:     -0.15 each, max -0.25
+      - Missing pool cards:    -0.025 each, max -0.15
+    总惩罚上限: -0.4
     """
     p = 0.0
     if issues["has_markdown"]:
-        p -= 0.2
+        p -= 0.1
     n_h = issues["n_hallucinated"]
     if n_h > 0:
-        p -= min(0.5, 0.3 * n_h)
+        p -= min(0.25, 0.15 * n_h)
     n_m = issues["n_missing"]
     if n_m > 0:
-        p -= min(0.3, 0.05 * n_m)
-    # Cap total format penalty to keep judge as dominant signal
-    p = max(p, -0.8)
+        p -= min(0.15, 0.025 * n_m)
+    p = max(p, -0.4)
     return round(p, 4)
 
 
@@ -212,7 +251,7 @@ def format_check(raw: str, card_pool: List[str]) -> Dict[str, Any]:
 
 
 # ============================================================================
-# L1b: Rule-based Score — 确定性规则评分
+# L1b: Rule-based Score — 位置加权排序评分
 # ============================================================================
 
 def _rule_based_score(
@@ -221,85 +260,94 @@ def _rule_based_score(
     negative_keys: List[str],
     ctx: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """基于确定性规则的排序质量评分，不依赖 LLM.
+    """位置加权的排序质量评分，覆盖所有位置.
+
+    核心思路：每张卡片在每个位置都有信号，而不是只看 Top-3.
+    这让 GRPO 组内有更大方差，模型能学到更细粒度的排序策略.
 
     评分维度:
-      1. negative_keys 位置: 应在排序底部 (权重 50%)
-      2. positive_keys 位置: 应在排序顶部 (权重 30%, 仅当 positive_keys 非空)
-      3. 上下文规则: 非大促期 MSA 卡片应排后 (权重 20%)
+      1. negative (60%): 负样本应在排名靠后
+         - 在 Top-3 → 重罚 (越靠前罚越重)
+         - 在中段   → 轻罚
+         - 在后段   → 奖励
+         - 未出现   → 中性 (0)
+      2. positive (30%): 正样本应在排名靠前
+         - 在 Top-3 → 重奖 (越靠前奖越重)
+         - 在中段   → 轻奖
+         - 在后段   → 惩罚
+         - 未出现   → 惩罚 (比放错位置更差)
+      3. context (10%): 非大促期 MSA 卡片不应出现
 
-    Returns:
-        {"score": float[-1,1], "neg_avg_position": float, "pos_avg_position": float, ...}
+    位置权重: 1/(i+1) — 越靠前信号越强
     """
     n = len(rank_list)
     if n == 0:
         return {"score": 0.0, "neg_avg_position": 0.0, "pos_avg_position": 0.0}
 
-    score = 0.0
-
-    # ── 1. Negative keys should be at the bottom ──
-    neg_positions = []
+    # ── 1. Negative score: 负样本应在排名靠后 ──
     neg_score = 0.0
+    neg_positions = []
     if negative_keys:
         for key in negative_keys:
             if key in rank_list:
                 pos = rank_list.index(key)
                 neg_positions.append(pos)
-                # pos=0 (top) → penalty; pos=n-1 (bottom) → reward
-                # Normalize to [-1, 1]: (n-1-pos)/(n-1) * 2 - 1
-                # pos at bottom (n-1) → +1, pos at top (0) → -1
-                norm = (n - 1 - pos) / max(n - 1, 1) * 2 - 1
-                neg_score += norm
+                weight = 1.0 / (pos + 1)  # 位置权重: pos0=1.0, pos1=0.5, pos2=0.33, pos15=0.0625
+                if pos < 3:
+                    neg_score += -weight      # Top-3: 重罚
+                elif pos < n // 2:
+                    neg_score += -weight * 0.3  # 中段: 轻罚
+                else:
+                    neg_score += weight * 0.5   # 后段: 奖励
+            # else: 未出现 → 0 (中性)
         neg_score /= len(negative_keys)
-        neg_avg_pos = sum(neg_positions) / len(neg_positions) if neg_positions else -1
     else:
-        neg_avg_pos = -1  # 无 negative keys
+        neg_score = 0.0
+    neg_avg_pos = sum(neg_positions) / len(neg_positions) if neg_positions else -1
 
-    # ── 2. Positive keys should be at the top ──
-    pos_positions = []
+    # ── 2. Positive score: 正样本应在排名靠前 ──
     pos_score = 0.0
+    pos_positions = []
     if positive_keys:
         for key in positive_keys:
             if key in rank_list:
                 pos = rank_list.index(key)
                 pos_positions.append(pos)
-                # pos=0 (top) → reward; pos=n-1 (bottom) → penalty
-                norm = (n - 1 - pos) / max(n - 1, 1) * 2 - 1
-                pos_score += norm
+                weight = 1.0 / (pos + 1)
+                if pos < 3:
+                    pos_score += weight          # Top-3: 重奖
+                elif pos < n // 2:
+                    pos_score += weight * 0.5    # 中段: 轻奖
+                else:
+                    pos_score += -weight * 0.3   # 后段: 惩罚
+            else:
+                pos_score += -0.3                # 未出现: 惩罚
         pos_score /= len(positive_keys)
-        pos_avg_pos = sum(pos_positions) / len(pos_positions) if pos_positions else -1
     else:
-        pos_score = 0.0  # 无 positive keys，不计分
-        pos_avg_pos = -1
+        pos_score = 0.0
+    pos_avg_pos = sum(pos_positions) / len(pos_positions) if pos_positions else -1
 
-    # ── 3. Context rules ──
+    # ── 3. Context score: 非大促期 MSA 卡片不应出现 ──
     ctx_score = 0.0
     is_mega = ctx.get("is_mega_period", False)
     if not is_mega:
-        # 非大促期，MSA 相关卡片应排后
         msa_keywords = ["msa", "mega", "sd_msa"]
-        msa_positions = []
-        for i, key in enumerate(rank_list):
+        msa_count = 0
+        for key in rank_list:
             for kw in msa_keywords:
                 if kw in key.lower():
-                    msa_positions.append(i)
+                    msa_count += 1
                     break
-        if msa_positions:
-            for pos in msa_positions:
-                norm = (n - 1 - pos) / max(n - 1, 1) * 2 - 1
-                # MSA 在非大促期排后 → reward (norm 接近 +1 表示在底部)
-                ctx_score += norm
-            ctx_score /= len(msa_positions)
+        if msa_count > 0:
+            ctx_score = -0.5  # 有 MSA 卡片出现 → 惩罚
         else:
-            ctx_score = 0.0  # 无 MSA 卡片
+            ctx_score = 0.5   # 无 MSA 卡片 → 奖励
 
     # ── 加权求和 ──
     if positive_keys:
-        # 有 positive_keys: 50% neg + 30% pos + 20% ctx
-        score = 0.5 * neg_score + 0.3 * pos_score + 0.2 * ctx_score
+        score = 0.6 * neg_score + 0.3 * pos_score + 0.1 * ctx_score
     else:
-        # 无 positive_keys: 60% neg + 40% ctx (重新分配权重)
-        score = 0.6 * neg_score + 0.4 * ctx_score
+        score = 0.7 * neg_score + 0.3 * ctx_score
 
     score = max(-1.0, min(1.0, score))
 
@@ -322,113 +370,98 @@ def compute_reward(
     ground_truth: Dict[str, Any],
     extra_info: Optional[Dict] = None,
 ) -> Dict[str, Any]:
-    """Knowledge-Grounded reward computation (v4).
+    """Knowledge-Grounded reward computation (v5 — unified formula).
 
-    三层架构:
-      L0: Format Gate → 不合法返回 -2.0
-      L0b: Format Penalty → Markdown/幻觉/缺失惩罚叠加到 judge score
-      L2: Knowledge Judge → TipBank 检索 + 意图识别 + 知识对比打分
+    统一公式:
+      final_score = α × rule_score + (1-α) × judge_score + format_penalty
+
+      - 有 LLM Judge: α=0.5 → final = 0.5×rule + 0.5×judge + format_penalty
+      - 无 LLM Judge: α=1.0 → final = rule_score + format_penalty
+
+    格式惩罚:
+      - 完全无效（0张卡解析出）: -0.3
+      - 部分有效（<3张卡）: -0.15
+      - 合法输出的格式问题: markdown -0.1, 幻觉 -0.15/个, 遗漏 -0.025/个
 
     Returns:
         {"score": float, "format_valid": bool, "format_penalty": float,
-         "has_markdown": bool, "n_hallucinated": int, "n_missing": int,
-         "feedback": str, "rank_list": [...], ...}
+         "rule_score": float, "judge_score": float, ...}
     """
     card_pool = ground_truth.get("card_pool", [])
-    positive_keys = ground_truth.get("positive_keys", [])
+    positive_keys = ground_truth.get("positive_keys", []) or ground_truth.get("positive_actions", [])
     negative_keys = ground_truth.get("negative_keys", [])
     ctx = ground_truth.get("context", {})
     ctx["card_pool"] = card_pool
     ctx["positive_actions"] = positive_keys
 
-    # L0+L1: Format Gate + Check
+    # ── 1. Format Check ──
     fc = format_check(solution_str, card_pool)
-    if not fc["valid"]:
-        return {
-            "score": FORMAT_PENALTY,
-            "format_valid": False,
-            "format_penalty": 0.0,
-            "has_markdown": False,
-            "n_hallucinated": 0,
-            "n_missing": 0,
-            "feedback": "format_invalid",
-            "rank_list": [],
-        }
-
     rank_list = fc["rank_list"]
-    format_penalty = fc["penalty"]
-    has_markdown = fc["has_markdown"]
-    n_hallucinated = fc["n_hallucinated"]
-    n_missing = fc["n_missing"]
 
-    # Log format issues (sample-level, rate-limited by caller)
-    if format_penalty < 0:
-        parts = []
-        if has_markdown:
-            parts.append("markdown")
-        if n_hallucinated:
-            parts.append(f"hallucinated={n_hallucinated}")
-        if n_missing:
-            parts.append(f"missing={n_missing}")
-        logger.debug("[FormatPenalty] %s → %.2f", ", ".join(parts), format_penalty)
-
-    # L1b: Rule-based Score (确定性规则评分，不依赖 LLM)
+    # ── 2. Rule-based Score（所有情况都算，用已解析的部分） ──
     rule_result = _rule_based_score(rank_list, positive_keys, negative_keys, ctx)
     rule_score = rule_result["score"]
 
-    # L2: Knowledge-Grounded Judge
-    client = _get_llm_client()
-    if not client:
-        return {
-            "score": format_penalty,
-            "format_valid": True,
-            "format_penalty": format_penalty,
-            "has_markdown": has_markdown,
-            "n_hallucinated": n_hallucinated,
-            "n_missing": n_missing,
-            "feedback": "llm_unavailable",
-            "rank_list": rank_list,
-        }
+    # ── 3. Format Penalty ──
+    if not fc["valid"]:
+        if len(rank_list) == 0:
+            format_penalty = -0.3   # 完全无效
+        else:
+            format_penalty = -0.15  # 部分有效但不足 3 张
+    else:
+        format_penalty = fc["penalty"]  # 格式合法，可能有 markdown/幻觉/遗漏惩罚
 
-    judge_model = os.environ.get("JUDGE_MODEL", "qwen-plus")
-    query_model = os.environ.get("QUERY_MODEL", "qwen-turbo")
+    # ── 4. LLM Judge（格式合法时才有意义） ──
+    judge_score = 0.0
+    judge_result = {}
+    has_judge = False
 
-    # Step 1: TipBank Retrieval
-    tips = _retrieve_tips(ctx, card_pool, client, query_model)
+    if fc["valid"]:
+        client = _get_llm_client()
+        if client:
+            judge_model = os.environ.get("JUDGE_MODEL", "qwen-plus")
+            query_model = os.environ.get("QUERY_MODEL", "qwen-turbo")
 
-    # Step 2: Intent Recognition
-    from .intent_recognizer import recognize_intent
-    intent = recognize_intent(ctx, client, judge_model)
+            # TipBank Retrieval
+            tips = _retrieve_tips(ctx, card_pool, client, query_model)
 
-    # Step 3: Knowledge Judge
-    from .knowledge_judge import knowledge_judge_single
-    judge_result = knowledge_judge_single(
-        rank_list, ctx, tips, intent,
-        positive_keys, negative_keys,
-        client, judge_model,
-    )
+            # Intent Recognition
+            from .intent_recognizer import recognize_intent
+            intent = recognize_intent(ctx, client, judge_model)
 
-    judge_score = judge_result.get("score", 0.0)
+            # Knowledge Judge
+            from .knowledge_judge import knowledge_judge_single
+            judge_result = knowledge_judge_single(
+                rank_list, ctx, tips, intent,
+                positive_keys, negative_keys,
+                client, judge_model,
+            )
+            judge_score = judge_result.get("score", 0.0)
+            has_judge = True
 
-    # 混合评分: 50% 规则分 + 50% judge 分 + 格式惩罚
-    # 规则分提供稳定信号，judge 分提供深度评估
-    final_score = 0.5 * rule_score + 0.5 * judge_score + format_penalty
+    # ── 5. 统一公式 ──
+    if has_judge:
+        # 有 judge: 50% rule + 50% judge + format_penalty
+        final_score = 0.5 * rule_score + 0.5 * judge_score + format_penalty
+    else:
+        # 无 judge: rule + format_penalty
+        final_score = rule_score + format_penalty
 
     return {
         "score": round(final_score, 4),
-        "format_valid": True,
-        "format_penalty": format_penalty,
-        "has_markdown": has_markdown,
-        "n_hallucinated": n_hallucinated,
-        "n_missing": n_missing,
+        "format_valid": fc["valid"],
+        "format_penalty": round(format_penalty, 4),
+        "has_markdown": fc.get("has_markdown", False),
+        "n_hallucinated": fc.get("n_hallucinated", 0),
+        "n_missing": fc.get("n_missing", 0),
         "rule_score": round(rule_score, 4),
         "rule_neg_position": rule_result.get("neg_avg_position", 0.0),
         "rule_pos_position": rule_result.get("pos_avg_position", 0.0),
+        "judge_score": round(judge_score, 4),
         "intent_alignment": judge_result.get("intent_alignment", 0.0),
         "strategy_compliance": judge_result.get("strategy_compliance", 0.0),
         "result_prediction": judge_result.get("result_prediction", 0.0),
         "risk_avoidance": judge_result.get("risk_avoidance", 0.0),
-        "judge_score": round(judge_score, 4),
         "rank_list": rank_list,
         "feedback": judge_result.get("reasoning", ""),
     }

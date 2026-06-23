@@ -201,11 +201,24 @@ class FSDPCheckpointManager(BaseCheckpointManager):
         # record the previous global step
         self.previous_global_step = global_step
 
-        if self.rank == 0:
-            self.ensure_checkpoint_capacity(max_ckpt_to_keep)
-
+        # ── 修复 checkpoint 保存时的 barrier 死锁 ──
+        # 原代码: rank 0 先做 ensure_checkpoint_capacity (shutil.rmtree on OSS, 可能几分钟),
+        #         然后所有 rank barrier → rank 1,2,3 等 rank 0 删完 → 超时死锁.
+        # 修复: 先创建目录并快速同步, 然后 rank 0 在后台做 cleanup (不阻塞保存).
         local_path = local_mkdir_safe(local_path)
-        torch.distributed.barrier()
+        torch.distributed.barrier()  # 快速同步, 确保所有 rank 的目录都创建好了
+
+        # Rank 0 在后台线程清理旧 checkpoint, 不阻塞保存流程
+        cleanup_future = None
+        if self.rank == 0 and max_ckpt_to_keep and isinstance(max_ckpt_to_keep, int) and max_ckpt_to_keep > 1:
+            import threading
+            def do_cleanup():
+                try:
+                    self.ensure_checkpoint_capacity(max_ckpt_to_keep)
+                except Exception as e:
+                    logger.warning(f"Rank 0: checkpoint cleanup failed: {e}")
+            cleanup_thread = threading.Thread(target=do_cleanup, daemon=True)
+            cleanup_thread.start()
 
         # check if the checkpoint_save_contents is valid
         if self.should_save_model:
