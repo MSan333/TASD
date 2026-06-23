@@ -142,6 +142,10 @@ outputs
 
 other_implementation
 Dockerfile.gh200-ofi
-DOCKER_PLAN_GH200.mdxdl_config_*.json
+DOCKER_PLAN_GH200.md
+xdl_config_*.json
 exp/grpo/data/
 outputs/
+
+# 含密钥的本地脚本（不要提交）
+exp/grpo/start/submit_nebula.sh
